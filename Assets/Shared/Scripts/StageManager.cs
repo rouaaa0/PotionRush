@@ -93,17 +93,4 @@ public class StageManager : MonoBehaviour
         Score += config.potionBonus + Mathf.FloorToInt(TimeLeft) * config.pointsPerSecondLeft;
         StageWon?.Invoke(Score);
     }
-
-    // Temporary on-screen text until the real HUD is built.
-    void OnGUI()
-    {
-        GUIStyle style = new GUIStyle(GUI.skin.label) { fontSize = 22 };
-        style.normal.textColor = Color.white;
-
-        string text = "Score " + Score + "   Time " + Mathf.CeilToInt(TimeLeft) + "   " + State;
-        foreach (RecipeEntry entry in config.recipe)
-            text += "\n" + entry.type + " " + Collected(entry.type) + "/" + entry.amount;
-
-        GUI.Label(new Rect(16, 12, 600, 200), text, style);
-    }
 }
