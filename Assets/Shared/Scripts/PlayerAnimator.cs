@@ -2,6 +2,7 @@ using UnityEngine;
 
 // Makes the wizard feel alive: breathing when idle, a bouncy waddle when walking,
 // a kick on every shake while brewing and a happy jump when the potion is done.
+// When time runs out the cauldron explodes: the hat flies off and the wizard falls flat.
 // It is added automatically by PlayerController.
 public class PlayerAnimator : MonoBehaviour
 {
@@ -9,6 +10,8 @@ public class PlayerAnimator : MonoBehaviour
     Vector3 lastPosition;
     float phase;
     float shakeKick;
+    float lostTime;
+    bool hatLaunched;
 
     void Start()
     {
@@ -38,16 +41,36 @@ public class PlayerAnimator : MonoBehaviour
 
         StageManager stage = StageManager.Instance;
         bool won = stage != null && stage.State == StageState.Won;
+        bool lost = stage != null && stage.State == StageState.Lost;
         bool brewing = stage != null && stage.Brewing;
 
         float height = 0f;
         float scaleY = 1f;
         float lean = 0f;
         float roll = 0f;
+        float followSpeed = 20f;
 
         shakeKick = Mathf.MoveTowards(shakeKick, 0f, Time.deltaTime * 4f);
 
-        if (won)
+        if (lost)
+        {
+            lostTime += Time.deltaTime;
+            followSpeed = 7f;
+
+            // explosion: the hat flies off, then the wizard falls flat on her back
+            if (!hatLaunched && lostTime > 0.1f)
+            {
+                hatLaunched = true;
+                LaunchHat("HatBrim");
+                LaunchHat("HatTop");
+            }
+            if (lostTime > 0.15f)
+            {
+                lean = -88f;
+                height = 0.42f;
+            }
+        }
+        else if (won)
         {
             phase += Time.deltaTime * 9f;
             height = Mathf.Abs(Mathf.Sin(phase)) * 0.5f;
@@ -72,7 +95,7 @@ public class PlayerAnimator : MonoBehaviour
             scaleY = 1f + Mathf.Sin(phase) * 0.02f;
         }
 
-        float follow = 1f - Mathf.Exp(-20f * Time.deltaTime);
+        float follow = 1f - Mathf.Exp(-followSpeed * Time.deltaTime);
 
         Vector3 position = model.localPosition;
         position.y = Mathf.Lerp(position.y, height, follow);
@@ -83,5 +106,15 @@ public class PlayerAnimator : MonoBehaviour
         model.localScale = scale;
 
         model.localRotation = Quaternion.Slerp(model.localRotation, Quaternion.Euler(lean, 0f, roll), follow);
+    }
+
+    void LaunchHat(string partName)
+    {
+        Transform part = model.Find(partName);
+        if (part == null) return;
+
+        part.SetParent(null, true);
+        Vector3 away = new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f)) * 2.5f;
+        part.gameObject.AddComponent<Tumble>().Launch(away + Vector3.up * 7f, new Vector3(Random.Range(-400f, 400f), Random.Range(-200f, 200f), Random.Range(-400f, 400f)), 0.05f);
     }
 }

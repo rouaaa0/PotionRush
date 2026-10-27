@@ -93,7 +93,7 @@ public static class HUDBuilder
         Debug.Log("HUD created. Press Play to see it.");
     }
 
-    static GameObject MakeImage(Transform parent, string name, Color color, Vector2 anchor, Vector2 position, Vector2 size)
+    internal static GameObject MakeImage(Transform parent, string name, Color color, Vector2 anchor, Vector2 position, Vector2 size)
     {
         GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
         go.transform.SetParent(parent, false);
@@ -102,7 +102,7 @@ public static class HUDBuilder
         return go;
     }
 
-    static Text MakeText(Transform parent, string name, string content, Font font, int size, TextAnchor align,
+    internal static Text MakeText(Transform parent, string name, string content, Font font, int size, TextAnchor align,
         Vector2 anchor, Vector2 position, Vector2 boxSize)
     {
         GameObject go = new GameObject(name, typeof(RectTransform), typeof(Text));

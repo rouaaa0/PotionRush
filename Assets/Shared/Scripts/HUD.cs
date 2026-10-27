@@ -26,6 +26,11 @@ public class HUD : MonoBehaviour
     int lastScore;
     float scorePunch;
     float popTime;
+    float loseTimer = -1f;
+    float winTimer = -1f;
+    int winScore;
+    Text banner;
+    float bannerTime;
 
     void Start()
     {
@@ -67,6 +72,18 @@ public class HUD : MonoBehaviour
             sb.Append("\n").Append(entry.type).Append("  ").Append(stage.Collected(entry.type)).Append("/").Append(entry.amount);
         recipeText.text = sb.ToString();
 
+        if (loseTimer > 0f)
+        {
+            loseTimer -= Time.deltaTime;
+            if (loseTimer <= 0f) ShowLoseCard();
+        }
+
+        if (winTimer > 0f)
+        {
+            winTimer -= Time.deltaTime;
+            if (winTimer <= 0f) ShowWinCard();
+        }
+
         UpdateHint();
         Animate();
     }
@@ -81,6 +98,15 @@ public class HUD : MonoBehaviour
         }
         scorePunch = Mathf.MoveTowards(scorePunch, 0f, Time.deltaTime * 4f);
         scoreText.transform.localScale = Vector3.one * (1f + scorePunch * 0.25f);
+
+        if (banner != null && banner.gameObject.activeSelf)
+        {
+            bannerTime += Time.deltaTime;
+            float x = Mathf.Clamp01(bannerTime / 0.5f) - 1f;
+            const float c1 = 1.70158f;
+            float pop = 1f + (c1 + 1f) * x * x * x + c1 * x * x;
+            banner.transform.localScale = Vector3.one * pop * (1f + Mathf.Sin(bannerTime * 6f) * 0.03f);
+        }
 
         if (resultPanel.activeSelf && card != null)
         {
@@ -121,11 +147,48 @@ public class HUD : MonoBehaviour
         gaugeLabel.text = "Préparation  " + Mathf.RoundToInt(progress * 100f) + " %";
     }
 
+    // A big "Potion réussie !" shows first, then the score card follows once the celebration has played.
     void OnWon(int finalScore)
     {
         gaugeRoot.SetActive(false);
+        winScore = finalScore;
+        winTimer = 2.8f;
+        CreateBanner();
+    }
+
+    void CreateBanner()
+    {
+        GameObject go = new GameObject("WinBanner", typeof(RectTransform), typeof(Text), typeof(Shadow));
+        go.transform.SetParent(transform, false);
+
+        banner = go.GetComponent<Text>();
+        banner.font = scoreText.font;
+        banner.fontSize = 130;
+        banner.alignment = TextAnchor.MiddleCenter;
+        banner.color = new Color(0.95f, 0.71f, 0.27f, 1f);
+        banner.text = "Potion réussie !";
+        banner.horizontalOverflow = HorizontalWrapMode.Overflow;
+        banner.verticalOverflow = VerticalWrapMode.Overflow;
+        banner.raycastTarget = false;
+
+        Shadow shadow = go.GetComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.65f);
+        shadow.effectDistance = new Vector2(6f, -6f);
+
+        RectTransform rect = banner.rectTransform;
+        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = new Vector2(0f, 220f);
+        rect.sizeDelta = new Vector2(1600f, 200f);
+
+        bannerTime = 0f;
+    }
+
+    void ShowWinCard()
+    {
+        if (banner != null) banner.gameObject.SetActive(false);
         resultPanel.SetActive(true);
         popTime = 0f;
+        int finalScore = winScore;
 
         StageConfig c = stage.config;
         int ingredients = 0;
@@ -140,12 +203,19 @@ public class HUD : MonoBehaviour
             "Score final   " + finalScore;
     }
 
+    // The end card waits a moment so the player can see the explosion first.
     void OnLost()
     {
         gaugeRoot.SetActive(false);
+        loseTimer = 1.8f;
+    }
+
+    void ShowLoseCard()
+    {
         resultPanel.SetActive(true);
         popTime = 0f;
         resultTitle.text = "Temps écoulé";
+        resultTitle.color = new Color(1f, 0.3f, 0.25f, 1f);
         resultDetails.text = "Score   " + stage.Score;
     }
 

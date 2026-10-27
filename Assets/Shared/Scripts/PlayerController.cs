@@ -24,6 +24,9 @@ public class PlayerController : MonoBehaviour
         GameInput input = GameInput.Instance;
         if (!CanMove || input == null) return;
 
+        // the wizard stops when time runs out
+        if (StageManager.Instance != null && StageManager.Instance.State == StageState.Lost) return;
+
         Vector3 direction = new Vector3(input.Move.x, 0f, -input.Move.y);
         if (direction.sqrMagnitude < 0.001f) return;
 
