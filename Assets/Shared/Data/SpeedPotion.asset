@@ -16,6 +16,7 @@ MonoBehaviour:
   potionName: Speed potion
   timeLimit: 120
   shakesRequired: 10
+  showTutorialHints: 1
   recipe:
   - type: 0
     amount: 2

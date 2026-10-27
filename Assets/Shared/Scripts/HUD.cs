@@ -17,8 +17,15 @@ public class HUD : MonoBehaviour
     public Text resultTitle;
     public Text resultDetails;
     public Button replayButton;
+    public GameObject hintRoot;
+    public Text hintText;
 
     StageManager stage;
+    bool hasMoved;
+    Transform card;
+    int lastScore;
+    float scorePunch;
+    float popTime;
 
     void Start()
     {
@@ -32,6 +39,7 @@ public class HUD : MonoBehaviour
 
         gaugeRoot.SetActive(false);
         resultPanel.SetActive(false);
+        card = resultPanel.transform.Find("Card");
 
         stage.BrewProgressed += OnBrewProgressed;
         stage.StageWon += OnWon;
@@ -58,6 +66,52 @@ public class HUD : MonoBehaviour
         foreach (RecipeEntry entry in stage.config.recipe)
             sb.Append("\n").Append(entry.type).Append("  ").Append(stage.Collected(entry.type)).Append("/").Append(entry.amount);
         recipeText.text = sb.ToString();
+
+        UpdateHint();
+        Animate();
+    }
+
+    // The score bumps when it changes and the end card pops in.
+    void Animate()
+    {
+        if (stage.Score != lastScore)
+        {
+            lastScore = stage.Score;
+            scorePunch = 1f;
+        }
+        scorePunch = Mathf.MoveTowards(scorePunch, 0f, Time.deltaTime * 4f);
+        scoreText.transform.localScale = Vector3.one * (1f + scorePunch * 0.25f);
+
+        if (resultPanel.activeSelf && card != null)
+        {
+            popTime += Time.unscaledDeltaTime;
+            float x = Mathf.Clamp01(popTime / 0.35f) - 1f;
+            const float c1 = 1.70158f;
+            card.localScale = Vector3.one * (1f + (c1 + 1f) * x * x * x + c1 * x * x); // overshoots a little, then settles
+        }
+    }
+
+    // Short instructions for the first stage, driven by what the player has done so far.
+    void UpdateHint()
+    {
+        string hint = "";
+
+        if (stage.config.showTutorialHints && stage.State == StageState.Playing)
+        {
+            if (GameInput.Instance != null && GameInput.Instance.Move.sqrMagnitude > 0.01f) hasMoved = true;
+
+            int total = 0;
+            foreach (RecipeEntry entry in stage.config.recipe) total += stage.Collected(entry.type);
+
+            if (stage.Brewing) hint = "Secouez votre téléphone !";
+            else if (stage.RecipeComplete) hint = "Allez jusqu'au chaudron";
+            else if (!hasMoved) hint = "Inclinez votre téléphone pour vous déplacer";
+            else if (total == 0) hint = "Marchez sur un ingrédient pour le ramasser";
+            else hint = "Ramassez tous les ingrédients";
+        }
+
+        hintRoot.SetActive(hint.Length > 0);
+        hintText.text = hint;
     }
 
     void OnBrewProgressed(float progress)
@@ -71,6 +125,7 @@ public class HUD : MonoBehaviour
     {
         gaugeRoot.SetActive(false);
         resultPanel.SetActive(true);
+        popTime = 0f;
 
         StageConfig c = stage.config;
         int ingredients = 0;
@@ -89,6 +144,7 @@ public class HUD : MonoBehaviour
     {
         gaugeRoot.SetActive(false);
         resultPanel.SetActive(true);
+        popTime = 0f;
         resultTitle.text = "Temps écoulé";
         resultDetails.text = "Score   " + stage.Score;
     }

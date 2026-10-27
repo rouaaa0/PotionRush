@@ -16,6 +16,7 @@ public class PlayerController : MonoBehaviour
     void Awake()
     {
         controller = GetComponent<CharacterController>();
+        if (GetComponent<PlayerAnimator>() == null) gameObject.AddComponent<PlayerAnimator>();
     }
 
     void Update()

@@ -44,6 +44,13 @@ public static class HUDBuilder
         hud.recipeText = MakeText(root.transform, "Recipe", "OBJECTIFS", font, 34, TextAnchor.UpperLeft,
             new Vector2(0f, 1f), new Vector2(30f, -110f), new Vector2(600f, 240f));
 
+        // tutorial hint (only shown when the stage config asks for it)
+        GameObject hint = MakeImage(root.transform, "Hint", new Color(0.08f, 0.05f, 0.13f, 0.72f), new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(1300f, 80f));
+        hud.hintRoot = hint;
+        hud.hintText = MakeText(hint.transform, "Text", "", font, 40, TextAnchor.MiddleCenter,
+            new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1300f, 80f));
+        hud.hintText.color = Gold;
+
         // brewing gauge
         GameObject gauge = MakeImage(root.transform, "Gauge", Panel, new Vector2(0.5f, 0f), new Vector2(0f, 50f), new Vector2(900f, 60f));
         GameObject fill = MakeImage(gauge.transform, "Fill", new Color(0.37f, 0.89f, 0.63f, 1f), new Vector2(0f, 0.5f), Vector2.zero, Vector2.zero);

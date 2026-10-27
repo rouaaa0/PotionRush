@@ -1,32 +1,21 @@
 using UnityEngine;
 
-// Lives on the player. A tap on an ingredient collects it when the player is close enough.
+// Lives on the player. Walking over an ingredient collects it, no tap needed.
 public class Interactor : MonoBehaviour
 {
-    [SerializeField] float range = 3f;
+    [SerializeField] float pickupRadius = 0.5f;
 
-    void Start()
+    readonly Collider[] hits = new Collider[8];
+
+    void Update()
     {
-        if (GameInput.Instance != null) GameInput.Instance.Tapped += OnTap;
-    }
+        Vector3 center = transform.position + Vector3.up * 0.9f;
+        int count = Physics.OverlapSphereNonAlloc(center, pickupRadius, hits, ~0, QueryTriggerInteraction.Collide);
 
-    void OnDestroy()
-    {
-        if (GameInput.Instance != null) GameInput.Instance.Tapped -= OnTap;
-    }
-
-    void OnTap(Vector2 screenPosition)
-    {
-        Camera cam = Camera.main;
-        if (cam == null) return;
-
-        Ray ray = cam.ScreenPointToRay(screenPosition);
-        if (!Physics.Raycast(ray, out RaycastHit hit, 100f)) return;
-
-        Ingredient ingredient = hit.collider.GetComponentInParent<Ingredient>();
-        if (ingredient == null) return;
-
-        if (Vector3.Distance(transform.position, ingredient.transform.position) <= range)
-            ingredient.Collect();
+        for (int i = 0; i < count; i++)
+        {
+            Ingredient ingredient = hits[i].GetComponentInParent<Ingredient>();
+            if (ingredient != null) ingredient.Collect();
+        }
     }
 }

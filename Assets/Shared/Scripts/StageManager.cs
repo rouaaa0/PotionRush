@@ -15,6 +15,7 @@ public class StageManager : MonoBehaviour
     public StageState State { get; private set; } = StageState.Playing;
     public float TimeLeft { get; private set; }
     public int Score { get; private set; }
+    public bool Brewing { get; private set; } // true while the player is at the cauldron
 
     public event Action<IngredientType> IngredientCollected;
     public event Action<float> BrewProgressed; // 0 to 1
@@ -78,6 +79,11 @@ public class StageManager : MonoBehaviour
         Score += config.pointsPerIngredient;
         IngredientCollected?.Invoke(type);
         return true;
+    }
+
+    public void SetBrewing(bool brewing)
+    {
+        Brewing = brewing;
     }
 
     public void ReportBrewProgress(float progress)
