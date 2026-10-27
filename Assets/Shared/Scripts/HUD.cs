@@ -1,15 +1,16 @@
-using System.Text;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// Shows the score, timer, recipe, brewing gauge and the end screen.
+// Shows the score, timer, objectives, brewing gauge, hints and the end screen.
 // It only reads from the StageManager and never changes the rules.
 public class HUD : MonoBehaviour
 {
     public Text scoreText;
     public Text timerText;
-    public Text recipeText;
+    public RectTransform objectivesCard;
+    public Sprite circleSprite;
     public GameObject gaugeRoot;
     public Image gaugeFill;
     public Text gaugeLabel;
@@ -19,6 +20,20 @@ public class HUD : MonoBehaviour
     public Button replayButton;
     public GameObject hintRoot;
     public Text hintText;
+
+    class ObjectiveRow
+    {
+        public IngredientType type;
+        public int amount;
+        public Image dot;
+        public Text label;
+        public Text count;
+    }
+
+    static readonly Color Done = new Color(0.37f, 0.89f, 0.63f, 1f);
+    static readonly Color Danger = new Color(1f, 0.35f, 0.3f, 1f);
+
+    readonly List<ObjectiveRow> rows = new List<ObjectiveRow>();
 
     StageManager stage;
     bool hasMoved;
@@ -45,6 +60,7 @@ public class HUD : MonoBehaviour
         gaugeRoot.SetActive(false);
         resultPanel.SetActive(false);
         card = resultPanel.transform.Find("Card");
+        BuildObjectives();
 
         stage.BrewProgressed += OnBrewProgressed;
         stage.StageWon += OnWon;
@@ -60,17 +76,83 @@ public class HUD : MonoBehaviour
         stage.StageLost -= OnLost;
     }
 
+    // One row per recipe entry: a coloured dot, the name and a counter.
+    void BuildObjectives()
+    {
+        float y = -72f;
+        foreach (RecipeEntry entry in stage.config.recipe)
+        {
+            ObjectiveRow row = new ObjectiveRow { type = entry.type, amount = entry.amount };
+
+            GameObject dotObj = new GameObject("Dot", typeof(RectTransform), typeof(Image));
+            dotObj.transform.SetParent(objectivesCard, false);
+            row.dot = dotObj.GetComponent<Image>();
+            row.dot.sprite = circleSprite;
+            row.dot.raycastTarget = false;
+            Place(row.dot.rectTransform, new Vector2(0f, 1f), new Vector2(28f, y - 4f), new Vector2(28f, 28f));
+
+            row.label = NewText("Name", TextAnchor.UpperLeft, 34);
+            Place(row.label.rectTransform, new Vector2(0f, 1f), new Vector2(72f, y), new Vector2(260f, 40f));
+
+            row.count = NewText("Count", TextAnchor.UpperRight, 34);
+            row.count.fontStyle = FontStyle.Bold;
+            Place(row.count.rectTransform, new Vector2(1f, 1f), new Vector2(-28f, y), new Vector2(110f, 40f));
+
+            rows.Add(row);
+            y -= 52f;
+        }
+
+        objectivesCard.sizeDelta = new Vector2(objectivesCard.sizeDelta.x, -y + 22f);
+    }
+
+    Text NewText(string name, TextAnchor align, int size)
+    {
+        GameObject go = new GameObject(name, typeof(RectTransform), typeof(Text));
+        go.transform.SetParent(objectivesCard, false);
+        Text t = go.GetComponent<Text>();
+        t.font = scoreText.font;
+        t.fontSize = size;
+        t.alignment = align;
+        t.color = Color.white;
+        t.horizontalOverflow = HorizontalWrapMode.Overflow;
+        t.verticalOverflow = VerticalWrapMode.Overflow;
+        t.raycastTarget = false;
+        return t;
+    }
+
+    static void Place(RectTransform rect, Vector2 anchor, Vector2 position, Vector2 size)
+    {
+        rect.anchorMin = anchor;
+        rect.anchorMax = anchor;
+        rect.pivot = anchor;
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+    }
+
     void Update()
     {
-        scoreText.text = "Score  " + stage.Score;
+        scoreText.text = stage.Score.ToString();
 
         int seconds = Mathf.CeilToInt(stage.TimeLeft);
         timerText.text = (seconds / 60) + ":" + (seconds % 60).ToString("00");
 
-        StringBuilder sb = new StringBuilder("OBJECTIFS");
-        foreach (RecipeEntry entry in stage.config.recipe)
-            sb.Append("\n").Append(entry.type).Append("  ").Append(stage.Collected(entry.type)).Append("/").Append(entry.amount);
-        recipeText.text = sb.ToString();
+        // the timer turns red and pulses in the last 10 seconds
+        bool low = stage.State == StageState.Playing && seconds <= 10;
+        timerText.color = low ? Danger : Color.white;
+        timerText.transform.localScale = Vector3.one * (low ? 1f + Mathf.Abs(Mathf.Sin(Time.time * 4f)) * 0.1f : 1f);
+
+        foreach (ObjectiveRow row in rows)
+        {
+            int have = stage.Collected(row.type);
+            bool complete = have >= row.amount;
+            Color text = complete ? Done : Color.white;
+
+            row.dot.color = complete ? Done : IngredientColor(row.type);
+            row.label.color = text;
+            row.count.color = text;
+            row.label.text = Label(row.type, row.amount);
+            row.count.text = have + "/" + row.amount;
+        }
 
         if (loseTimer > 0f)
         {
@@ -88,7 +170,36 @@ public class HUD : MonoBehaviour
         Animate();
     }
 
-    // The score bumps when it changes and the end card pops in.
+    static Color IngredientColor(IngredientType type)
+    {
+        switch (type)
+        {
+            case IngredientType.Mushroom: return new Color(0.89f, 0.22f, 0.29f, 1f);
+            case IngredientType.Crystal: return new Color(0.44f, 0.83f, 1f, 1f);
+            case IngredientType.Herb: return new Color(0.4f, 0.8f, 0.3f, 1f);
+            case IngredientType.IceFlower: return new Color(0.75f, 0.93f, 1f, 1f);
+            case IngredientType.Scroll: return new Color(0.9f, 0.8f, 0.55f, 1f);
+            case IngredientType.DragonScale: return new Color(1f, 0.5f, 0.15f, 1f);
+            default: return Color.white;
+        }
+    }
+
+    static string Label(IngredientType type, int amount)
+    {
+        bool many = amount > 1;
+        switch (type)
+        {
+            case IngredientType.Mushroom: return many ? "Champignons" : "Champignon";
+            case IngredientType.Crystal: return many ? "Cristaux" : "Cristal";
+            case IngredientType.Herb: return many ? "Herbes" : "Herbe";
+            case IngredientType.IceFlower: return many ? "Fleurs de glace" : "Fleur de glace";
+            case IngredientType.Scroll: return many ? "Parchemins" : "Parchemin";
+            case IngredientType.DragonScale: return many ? "Écailles" : "Écaille";
+            default: return type.ToString();
+        }
+    }
+
+    // The score bumps when it changes, the banner bounces and the end card pops in.
     void Animate()
     {
         if (stage.Score != lastScore)
@@ -164,6 +275,7 @@ public class HUD : MonoBehaviour
         banner = go.GetComponent<Text>();
         banner.font = scoreText.font;
         banner.fontSize = 130;
+        banner.fontStyle = FontStyle.Bold;
         banner.alignment = TextAnchor.MiddleCenter;
         banner.color = new Color(0.95f, 0.71f, 0.27f, 1f);
         banner.text = "Potion réussie !";

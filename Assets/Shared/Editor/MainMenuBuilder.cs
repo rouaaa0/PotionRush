@@ -67,7 +67,7 @@ public static class MainMenuBuilder
         panelRect.offsetMin = Vector2.zero;
         panelRect.offsetMax = Vector2.zero;
 
-        GameObject card = HUDBuilder.MakeImage(panel.transform, "Card", Dark, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1100f, 720f));
+        GameObject card = HUDBuilder.MakePanel(panel.transform, "Card", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1100f, 720f), 0.96f);
         Text cardTitle = HUDBuilder.MakeText(card.transform, "Title", "Comment jouer", font, 72, TextAnchor.MiddleCenter,
             new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(1000f, 100f));
         cardTitle.color = Gold;
@@ -111,6 +111,7 @@ public static class MainMenuBuilder
     {
         GameObject go = HUDBuilder.MakeImage(parent, name, primary ? Gold : new Color(1f, 1f, 1f, 0.14f),
             new Vector2(0.5f, 0.5f), position, new Vector2(460f, 100f));
+        HUDBuilder.Round(go.GetComponent<Image>());
         Button button = go.AddComponent<Button>();
         Text text = HUDBuilder.MakeText(go.transform, "Label", label, font, 54, TextAnchor.MiddleCenter,
             new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(460f, 100f));
