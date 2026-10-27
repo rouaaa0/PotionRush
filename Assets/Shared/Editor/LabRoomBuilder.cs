@@ -42,7 +42,7 @@ public static class LabRoomBuilder
         wall.GetComponent<MeshRenderer>().sharedMaterial = mat;
     }
 
-    static Material GetMaterial(string name, Color color)
+    internal static Material GetMaterial(string name, Color color, float emission = 0f)
     {
         string path = ArtFolder + "/" + name + ".mat";
         Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -50,6 +50,11 @@ public static class LabRoomBuilder
 
         mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
         mat.SetColor("_BaseColor", color);
+        if (emission > 0f)
+        {
+            mat.EnableKeyword("_EMISSION");
+            mat.SetColor("_EmissionColor", color * emission);
+        }
         AssetDatabase.CreateAsset(mat, path);
         return mat;
     }
