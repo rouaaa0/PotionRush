@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -6,20 +7,20 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// Adds a menu item that builds the main menu scene (lab backdrop + buttons)
-// and puts the menu and Stage 1 in the Build Settings.
+// Adds a menu item that builds the main menu scene (lab backdrop, buttons, stage select)
+// and puts the menu and the stages in the Build Settings.
 public static class MainMenuBuilder
 {
     const string ScenePath = "Assets/Scenes/MainMenu.unity";
-    const string Stage1Path = "Assets/Stages/Stage1_Lab/Stage1_Lab.unity";
 
     static readonly Color Gold = new Color(0.95f, 0.71f, 0.27f, 1f);
-    static readonly Color Dark = new Color(0.09f, 0.055f, 0.14f, 0.95f);
 
     [MenuItem("Potion Rush/Build Main Menu")]
     static void Build()
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+
+        StageCatalog catalog = GetOrCreateCatalog();
 
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -41,7 +42,7 @@ public static class MainMenuBuilder
         CanvasScaler scaler = root.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.matchWidthOrHeight = 1f; // match the height: wide phones get extra width, nothing is cut off
 
         GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
         eventSystem.transform.SetParent(root.transform, false);
@@ -49,24 +50,42 @@ public static class MainMenuBuilder
         MainMenu menu = root.AddComponent<MainMenu>();
 
         Text title = HUDBuilder.MakeText(root.transform, "Title", "Potion Rush", font, 150, TextAnchor.MiddleCenter,
-            new Vector2(0.5f, 0.5f), new Vector2(0f, 240f), new Vector2(1500f, 200f));
+            new Vector2(0.5f, 0.5f), new Vector2(0f, 240f), new Vector2(1000f, 200f));
         title.color = Gold;
-        Text subtitle = HUDBuilder.MakeText(root.transform, "Subtitle", "Prépare la potion avant la fin du temps", font, 44, TextAnchor.MiddleCenter,
+        title.raycastTarget = true; // for the hidden "tap 5 times" demo switch
+        Button titleButton = title.gameObject.AddComponent<Button>();
+        titleButton.transition = Selectable.Transition.None;
+        menu.titleButton = titleButton;
+
+        Text subtitle = HUDBuilder.MakeText(root.transform, "Subtitle", "", font, 44, TextAnchor.MiddleCenter,
             new Vector2(0.5f, 0.5f), new Vector2(0f, 130f), new Vector2(1500f, 70f));
         subtitle.color = new Color(0.9f, 0.86f, 0.96f, 1f);
+        menu.subtitleText = subtitle;
 
         menu.playButton = MakeButton(root.transform, "PlayButton", "Jouer", font, new Vector2(0f, 10f), true);
         menu.instructionsButton = MakeButton(root.transform, "InstructionsButton", "Instructions", font, new Vector2(0f, -110f), false);
         menu.quitButton = MakeButton(root.transform, "QuitButton", "Quitter", font, new Vector2(0f, -230f), false);
 
-        // instructions window
-        GameObject panel = HUDBuilder.MakeImage(root.transform, "InstructionsPanel", new Color(0.04f, 0.02f, 0.08f, 0.75f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-        RectTransform panelRect = panel.GetComponent<RectTransform>();
-        panelRect.anchorMin = Vector2.zero;
-        panelRect.anchorMax = Vector2.one;
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
+        // stage select
+        GameObject select = MakeFullScreenPanel(root.transform, "StageSelectPanel", new Color(0.04f, 0.02f, 0.08f, 0.9f));
+        Text selectTitle = HUDBuilder.MakeText(select.transform, "Title", "Choisir un niveau", font, 90, TextAnchor.MiddleCenter,
+            new Vector2(0.5f, 0.5f), new Vector2(0f, 420f), new Vector2(1500f, 120f));
+        selectTitle.color = Gold;
+        selectTitle.fontStyle = FontStyle.Bold;
 
+        GameObject cards = new GameObject("Cards", typeof(RectTransform));
+        cards.transform.SetParent(select.transform, false);
+        StageSelect stageSelect = select.AddComponent<StageSelect>();
+        stageSelect.catalog = catalog;
+        stageSelect.font = font;
+        stageSelect.roundedSprite = HUDBuilder.Rounded();
+        stageSelect.cardsRoot = cards.GetComponent<RectTransform>();
+
+        menu.stageSelectBack = MakeButton(select.transform, "BackButton", "Retour", font, new Vector2(0f, -450f), false);
+        menu.stageSelectPanel = select;
+
+        // instructions window
+        GameObject panel = MakeFullScreenPanel(root.transform, "InstructionsPanel", new Color(0.04f, 0.02f, 0.08f, 0.75f));
         GameObject card = HUDBuilder.MakePanel(panel.transform, "Card", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1100f, 720f), 0.96f);
         Text cardTitle = HUDBuilder.MakeText(card.transform, "Title", "Comment jouer", font, 72, TextAnchor.MiddleCenter,
             new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(1000f, 100f));
@@ -84,15 +103,40 @@ public static class MainMenuBuilder
         menu.instructionsPanel = panel;
 
         EditorSceneManager.SaveScene(scene, ScenePath);
-
-        // the game needs to know both scenes so one can load the other
-        EditorBuildSettings.scenes = new[]
-        {
-            new EditorBuildSettingsScene(ScenePath, true),
-            new EditorBuildSettingsScene(Stage1Path, true),
-        };
+        BuildSettingsUpdater.Apply();
 
         Debug.Log("Main menu created and saved to " + ScenePath + ". Press Play, then click Jouer.");
+    }
+
+    // The list of all stages, in order. Each scene file must be named exactly like its sceneName.
+    static StageCatalog GetOrCreateCatalog()
+    {
+        StageCatalog catalog = AssetDatabase.LoadAssetAtPath<StageCatalog>(BuildSettingsUpdater.CatalogPath);
+        if (catalog != null) return catalog;
+
+        catalog = ScriptableObject.CreateInstance<StageCatalog>();
+        catalog.stages = new List<StageInfo>
+        {
+            new StageInfo { displayName = "Laboratoire", potionName = "Potion de vitesse", sceneName = "Stage1_Lab" },
+            new StageInfo { displayName = "Forêt enchantée", potionName = "Potion de croissance", sceneName = "Stage2_Forest" },
+            new StageInfo { displayName = "Grotte gelée", potionName = "Potion anti-feu", sceneName = "Stage3_Cave" },
+            new StageInfo { displayName = "Bibliothèque hantée", potionName = "Potion d'invisibilité", sceneName = "Stage4_Library" },
+            new StageInfo { displayName = "Tour de l'orage", potionName = "Potion de vol", sceneName = "Stage5_Tower" },
+            new StageInfo { displayName = "Antre du dragon", potionName = "Élixir de puissance", sceneName = "Stage6_Dragon" },
+        };
+        AssetDatabase.CreateAsset(catalog, BuildSettingsUpdater.CatalogPath);
+        return catalog;
+    }
+
+    static GameObject MakeFullScreenPanel(Transform parent, string name, Color color)
+    {
+        GameObject panel = HUDBuilder.MakeImage(parent, name, color, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        RectTransform rect = panel.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        return panel;
     }
 
     static void PlacePrefab(string path, Vector3 position)

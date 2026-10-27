@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public enum StageState { Playing, Won, Lost }
 
@@ -97,6 +98,7 @@ public class StageManager : MonoBehaviour
 
         State = StageState.Won;
         Score += config.potionBonus + Mathf.FloorToInt(TimeLeft) * config.pointsPerSecondLeft;
+        GameProgress.RecordWin(SceneManager.GetActiveScene().name, Score); // saves the best score and opens the next stage
         StageWon?.Invoke(Score);
     }
 }

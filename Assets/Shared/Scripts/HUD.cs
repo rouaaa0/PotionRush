@@ -18,6 +18,9 @@ public class HUD : MonoBehaviour
     public Text resultTitle;
     public Text resultDetails;
     public Button replayButton;
+    public Button menuButton;
+    public Button nextButton;
+    public StageCatalog catalog;
     public GameObject hintRoot;
     public Text hintText;
 
@@ -57,6 +60,10 @@ public class HUD : MonoBehaviour
             return;
         }
 
+        // match the screen height, so wide phones show extra width instead of cutting off the top and bottom
+        CanvasScaler scaler = GetComponent<CanvasScaler>();
+        if (scaler != null) scaler.matchWidthOrHeight = 1f;
+
         gaugeRoot.SetActive(false);
         resultPanel.SetActive(false);
         card = resultPanel.transform.Find("Card");
@@ -66,6 +73,27 @@ public class HUD : MonoBehaviour
         stage.StageWon += OnWon;
         stage.StageLost += OnLost;
         replayButton.onClick.AddListener(Replay);
+        if (menuButton != null) menuButton.onClick.AddListener(() => SceneManager.LoadScene("MainMenu"));
+        if (nextButton != null)
+        {
+            nextButton.onClick.AddListener(() =>
+            {
+                string next = NextStageScene();
+                if (next != null) SceneManager.LoadScene(next);
+            });
+        }
+    }
+
+    // The scene of the stage after this one, or null if this is the last (or the next one does not exist yet).
+    string NextStageScene()
+    {
+        if (catalog == null) return null;
+
+        int index = catalog.IndexOf(SceneManager.GetActiveScene().name);
+        if (index < 0 || index + 1 >= catalog.stages.Count) return null;
+
+        string next = catalog.stages[index + 1].sceneName;
+        return Application.CanStreamedLevelBeLoaded(next) ? next : null;
     }
 
     void OnDestroy()
@@ -299,6 +327,7 @@ public class HUD : MonoBehaviour
     {
         if (banner != null) banner.gameObject.SetActive(false);
         resultPanel.SetActive(true);
+        if (nextButton != null) nextButton.gameObject.SetActive(NextStageScene() != null);
         popTime = 0f;
         int finalScore = winScore;
 
@@ -325,6 +354,7 @@ public class HUD : MonoBehaviour
     void ShowLoseCard()
     {
         resultPanel.SetActive(true);
+        if (nextButton != null) nextButton.gameObject.SetActive(false);
         popTime = 0f;
         resultTitle.text = "Temps écoulé";
         resultTitle.color = new Color(1f, 0.3f, 0.25f, 1f);

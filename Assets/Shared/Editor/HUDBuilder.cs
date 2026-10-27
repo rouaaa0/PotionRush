@@ -32,7 +32,7 @@ public static class HUDBuilder
         CanvasScaler scaler = root.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.matchWidthOrHeight = 1f; // match the height: wide phones get extra width, nothing is cut off
 
         // buttons need an event system that understands the new Input System
         GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
@@ -99,19 +99,31 @@ public static class HUDBuilder
         hud.resultTitle.fontStyle = FontStyle.Bold;
         hud.resultDetails = MakeText(card.transform, "Details", "", font, 38, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0f, -170f), new Vector2(800f, 300f));
 
-        GameObject shadow = MakeImage(card.transform, "ButtonShadow", new Color(0.54f, 0.33f, 0.06f, 1f), new Vector2(0.5f, 0f), new Vector2(0f, 36f), new Vector2(360f, 92f));
-        Round(shadow.GetComponent<Image>());
-        shadow.GetComponent<Image>().raycastTarget = false;
-        GameObject button = MakeImage(card.transform, "ReplayButton", Gold, new Vector2(0.5f, 0f), new Vector2(0f, 48f), new Vector2(360f, 92f));
-        Round(button.GetComponent<Image>());
-        hud.replayButton = button.AddComponent<Button>();
-        Text label = MakeText(button.transform, "Label", "Rejouer", font, 50, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(360f, 92f));
-        label.color = new Color(0.23f, 0.12f, 0f, 1f);
-        label.fontStyle = FontStyle.Bold;
+        // three buttons: Menu, Rejouer and Suivant (Suivant only shows after a win, when the next stage exists)
+        hud.menuButton = MakeResultButton(card.transform, "MenuButton", "Menu", font, -290f, new Color(1f, 1f, 1f, 0.18f), Color.white);
+        hud.replayButton = MakeResultButton(card.transform, "ReplayButton", "Rejouer", font, 0f, Gold, new Color(0.23f, 0.12f, 0f, 1f));
+        hud.nextButton = MakeResultButton(card.transform, "NextButton", "Suivant", font, 290f, Mint, new Color(0.03f, 0.2f, 0.12f, 1f));
+        hud.catalog = AssetDatabase.LoadAssetAtPath<StageCatalog>("Assets/Shared/Data/StageCatalog.asset");
 
         PrefabUtility.SaveAsPrefabAssetAndConnect(root, PrefabPath, InteractionMode.UserAction);
         Selection.activeGameObject = root;
         Debug.Log("HUD created. Press Play to see it.");
+    }
+
+    static Button MakeResultButton(Transform parent, string name, string label, Font font, float x, Color color, Color textColor)
+    {
+        GameObject shadow = MakeImage(parent, name + "Shadow", new Color(color.r * 0.55f, color.g * 0.55f, color.b * 0.55f, color.a), new Vector2(0.5f, 0f), new Vector2(x, 36f), new Vector2(260f, 92f));
+        Round(shadow.GetComponent<Image>());
+        shadow.GetComponent<Image>().raycastTarget = false;
+
+        GameObject button = MakeImage(parent, name, color, new Vector2(0.5f, 0f), new Vector2(x, 48f), new Vector2(260f, 92f));
+        Round(button.GetComponent<Image>());
+        Button component = button.AddComponent<Button>();
+
+        Text text = MakeText(button.transform, "Label", label, font, 44, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260f, 92f));
+        text.color = textColor;
+        text.fontStyle = FontStyle.Bold;
+        return component;
     }
 
     // A dark rounded panel with a gold border. Put the content inside the returned object.
