@@ -19,12 +19,15 @@ public class GameInput : MonoBehaviour
     [SerializeField] float tiltDeadZone = 0.1f;
     [SerializeField] float tiltRange = 0.5f;    // how far to tilt (in g) for full speed
     [SerializeField] bool invertTilt = false;   // flip if the phone moves the wrong way
+    [SerializeField] bool invertForwardBack = false; // flip only forward / backward
 
     [Header("Shake")]
     [SerializeField] float shakeThreshold = 2.2f; // in g
     [SerializeField] float shakeCooldown = 0.25f;
 
     float lastShakeTime = -10f;
+    bool calibrated;
+    float neutralPitch;
 
     void Awake()
     {
@@ -34,6 +37,13 @@ public class GameInput : MonoBehaviour
             return;
         }
         Instance = this;
+
+        // the game is made for landscape: allow both landscape sides, never portrait
+        Screen.autorotateToPortrait = false;
+        Screen.autorotateToPortraitUpsideDown = false;
+        Screen.autorotateToLandscapeLeft = true;
+        Screen.autorotateToLandscapeRight = true;
+        Screen.orientation = ScreenOrientation.AutoRotation;
     }
 
     void OnEnable()
@@ -65,15 +75,32 @@ public class GameInput : MonoBehaviour
         if (Accelerometer.current != null)
         {
             Vector3 a = Accelerometer.current.acceleration.ReadValue();
-            // The game is played in landscape, so the device axes are swapped.
-            Vector2 tilt = new Vector2(-a.y, a.x);
+
+            // The player may hold the phone upright or flat, so forward/back is the pitch angle
+            // compared with the pose held when the stage started (that pose = standing still).
+            // x is the left/right tilt. It is flipped because on the Galaxy A30 it came out reversed.
+            if (!calibrated && a.sqrMagnitude > 0.25f)
+            {
+                neutralPitch = Pitch(a);
+                calibrated = true;
+            }
+            float forward = calibrated ? Mathf.Sin(Pitch(a) - neutralPitch) : 0f;
+            Vector2 tilt = new Vector2(-a.x, forward);
             if (invertTilt) tilt = -tilt;
+            if (invertForwardBack) tilt.y = -tilt.y;
             tilt /= tiltRange;
             if (tilt.magnitude < tiltDeadZone) return Vector2.zero;
             return Vector2.ClampMagnitude(tilt, 1f);
         }
 
         return Vector2.zero;
+    }
+
+    // 0 when the phone stands upright, 90 degrees (in radians) when it lies flat, screen up.
+    // Tilting the top edge away from the player makes the angle bigger.
+    static float Pitch(Vector3 a)
+    {
+        return Mathf.Atan2(-a.z, -a.y);
     }
 
     void CheckShake()

@@ -27,6 +27,12 @@ public static class LabRoomBuilder
         CreateWall(root, "Wall_Right", new Vector3(7.5f, 1.7f, 0f), new Vector3(0.3f, 3.4f, 15f), wallMat);
         CreateWall(root, "Wall_FrontLow", new Vector3(0f, 0.2f, 7.5f), new Vector3(15f, 0.4f, 0.3f), wallMat);
 
+        // the front wall looks low so the camera can see in, but the collider is as tall and
+        // thick as the other walls (in the wall's own scale) so the wizard cannot walk out
+        BoxCollider frontBlock = root.transform.Find("Wall_FrontLow").GetComponent<BoxCollider>();
+        frontBlock.size = new Vector3(1f, 8.5f, 3f);
+        frontBlock.center = new Vector3(0f, 3.75f, 1f);
+
         PrefabUtility.SaveAsPrefabAssetAndConnect(root, PrefabPath, InteractionMode.UserAction);
         Selection.activeGameObject = root;
         Debug.Log("Lab room created and saved to " + PrefabPath);

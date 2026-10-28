@@ -12,15 +12,20 @@ public class PlayerController : MonoBehaviour
     public bool CanMove = true;
 
     CharacterController controller;
+    Vector3 startPosition;
 
     void Awake()
     {
         controller = GetComponent<CharacterController>();
+        startPosition = transform.position;
         if (GetComponent<PlayerAnimator>() == null) gameObject.AddComponent<PlayerAnimator>();
     }
 
     void Update()
     {
+        // safety net: if the wizard ever falls out of the room, put it back where it started
+        if (transform.position.y < -3f) Respawn();
+
         GameInput input = GameInput.Instance;
         if (!CanMove || input == null) return;
 
@@ -34,5 +39,13 @@ public class PlayerController : MonoBehaviour
 
         Quaternion target = Quaternion.LookRotation(direction, Vector3.up);
         transform.rotation = Quaternion.RotateTowards(transform.rotation, target, turnSpeed * Time.deltaTime);
+    }
+
+    void Respawn()
+    {
+        // the CharacterController must be off, or it overrides a direct position change
+        controller.enabled = false;
+        transform.position = startPosition;
+        controller.enabled = true;
     }
 }
