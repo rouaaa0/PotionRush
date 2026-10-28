@@ -1,7 +1,8 @@
 using UnityEngine;
 
 // Moves the wizard from the tilt / keyboard input. The camera looks from the +Z side,
-// so pushing "up" moves the player toward -Z (away from the camera).
+// so pushing "up" moves the player toward -Z (away from the camera)
+// and pushing "right" moves the player toward -X (the right of the screen).
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
@@ -27,7 +28,7 @@ public class PlayerController : MonoBehaviour
         // the wizard stops when time runs out
         if (StageManager.Instance != null && StageManager.Instance.State == StageState.Lost) return;
 
-        Vector3 direction = new Vector3(input.Move.x, 0f, -input.Move.y);
+        Vector3 direction = new Vector3(-input.Move.x, 0f, -input.Move.y);
         if (direction.sqrMagnitude < 0.001f) return;
 
         controller.SimpleMove(direction * speed);
