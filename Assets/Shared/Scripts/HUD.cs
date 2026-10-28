@@ -335,6 +335,7 @@ public class HUD : MonoBehaviour
         resultDetails.text =
             "Ingrédients (" + ingredients + " × " + c.pointsPerIngredient + ")   " + (ingredients * c.pointsPerIngredient) + "\n" +
             "Potion terminée   " + c.potionBonus + "\n" +
+            (stage.BonusPoints > 0 ? "Bonus   " + stage.BonusPoints + "\n" : "") +
             "Temps restant (" + timeLeft + " s × " + c.pointsPerSecondLeft + ")   " + (timeLeft * c.pointsPerSecondLeft) + "\n\n" +
             "Score final   " + finalScore;
     }

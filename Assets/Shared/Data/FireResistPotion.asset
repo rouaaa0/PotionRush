@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StageConfig
   stageName: Frozen Cave
   potionName: Fire resistance potion
-  timeLimit: 90
+  timeLimit: 100
   shakesRequired: 12
   showTutorialHints: 0
   recipe:
