@@ -84,16 +84,11 @@ public class HUD : MonoBehaviour
         }
     }
 
-    // The scene of the stage after this one, or null if this is the last (or the next one does not exist yet).
+    // The scene of the next stage that exists (stages not made yet are skipped), or null if there is none.
     string NextStageScene()
     {
         if (catalog == null) return null;
-
-        int index = catalog.IndexOf(SceneManager.GetActiveScene().name);
-        if (index < 0 || index + 1 >= catalog.stages.Count) return null;
-
-        string next = catalog.stages[index + 1].sceneName;
-        return Application.CanStreamedLevelBeLoaded(next) ? next : null;
+        return GameProgress.NextStage(catalog, SceneManager.GetActiveScene().name);
     }
 
     void OnDestroy()
