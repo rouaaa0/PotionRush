@@ -16,6 +16,7 @@ public class StageManager : MonoBehaviour
     public StageState State { get; private set; } = StageState.Playing;
     public float TimeLeft { get; private set; }
     public int Score { get; private set; }
+    public int BonusPoints { get; private set; } // extra points from optional pickups (gems...)
     public bool Brewing { get; private set; } // true while the player is at the cauldron
 
     public event Action<IngredientType> IngredientCollected;
@@ -79,6 +80,16 @@ public class StageManager : MonoBehaviour
         collected[type] = Collected(type) + 1;
         Score += config.pointsPerIngredient;
         IngredientCollected?.Invoke(type);
+        return true;
+    }
+
+    // Optional pickups a stage can add on top of the recipe. Returns false once the stage is over.
+    public bool AddBonus(int points)
+    {
+        if (State != StageState.Playing) return false;
+
+        BonusPoints += points;
+        Score += points;
         return true;
     }
 

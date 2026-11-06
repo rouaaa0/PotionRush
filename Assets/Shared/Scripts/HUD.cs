@@ -84,16 +84,11 @@ public class HUD : MonoBehaviour
         }
     }
 
-    // The scene of the stage after this one, or null if this is the last (or the next one does not exist yet).
+    // The scene of the next stage that exists (stages not made yet are skipped), or null if there is none.
     string NextStageScene()
     {
         if (catalog == null) return null;
-
-        int index = catalog.IndexOf(SceneManager.GetActiveScene().name);
-        if (index < 0 || index + 1 >= catalog.stages.Count) return null;
-
-        string next = catalog.stages[index + 1].sceneName;
-        return Application.CanStreamedLevelBeLoaded(next) ? next : null;
+        return GameProgress.NextStage(catalog, SceneManager.GetActiveScene().name);
     }
 
     void OnDestroy()
@@ -327,7 +322,7 @@ public class HUD : MonoBehaviour
     {
         if (banner != null) banner.gameObject.SetActive(false);
         resultPanel.SetActive(true);
-        if (nextButton != null) nextButton.gameObject.SetActive(NextStageScene() != null);
+        ShowNextButton(NextStageScene() != null);
         popTime = 0f;
         int finalScore = winScore;
 
@@ -340,8 +335,18 @@ public class HUD : MonoBehaviour
         resultDetails.text =
             "Ingrédients (" + ingredients + " × " + c.pointsPerIngredient + ")   " + (ingredients * c.pointsPerIngredient) + "\n" +
             "Potion terminée   " + c.potionBonus + "\n" +
+            (stage.BonusPoints > 0 ? "Bonus   " + stage.BonusPoints + "\n" : "") +
             "Temps restant (" + timeLeft + " s × " + c.pointsPerSecondLeft + ")   " + (timeLeft * c.pointsPerSecondLeft) + "\n\n" +
             "Score final   " + finalScore;
+    }
+
+    // The button has a separate shadow behind it, so both are shown or hidden together.
+    void ShowNextButton(bool show)
+    {
+        if (nextButton == null) return;
+        nextButton.gameObject.SetActive(show);
+        Transform shadow = nextButton.transform.parent.Find(nextButton.name + "Shadow");
+        if (shadow != null) shadow.gameObject.SetActive(show);
     }
 
     // The end card waits a moment so the player can see the explosion first.
@@ -354,7 +359,7 @@ public class HUD : MonoBehaviour
     void ShowLoseCard()
     {
         resultPanel.SetActive(true);
-        if (nextButton != null) nextButton.gameObject.SetActive(false);
+        ShowNextButton(false);
         popTime = 0f;
         resultTitle.text = "Temps écoulé";
         resultTitle.color = new Color(1f, 0.3f, 0.25f, 1f);

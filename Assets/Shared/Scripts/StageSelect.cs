@@ -49,7 +49,7 @@ public class StageSelect : MonoBehaviour
 
         float fade = playable ? 1f : 0.5f;
         NewText(outer.transform, "Number", (index + 1).ToString(), 130, TextAnchor.MiddleCenter, Gold * fade, new Vector2(-150f, 0f), new Vector2(150f, 160f)).fontStyle = FontStyle.Bold;
-        NewText(outer.transform, "Name", info.displayName, 44, TextAnchor.MiddleLeft, Color.white * fade, new Vector2(80f, 70f), new Vector2(300f, 60f)).fontStyle = FontStyle.Bold;
+        NewText(outer.transform, "Name", info.displayName, 32, TextAnchor.MiddleLeft, Color.white * fade, new Vector2(80f, 70f), new Vector2(300f, 60f)).fontStyle = FontStyle.Bold;
         NewText(outer.transform, "Potion", info.potionName, 30, TextAnchor.MiddleLeft, Lavender * fade, new Vector2(80f, 18f), new Vector2(300f, 44f));
 
         string status;

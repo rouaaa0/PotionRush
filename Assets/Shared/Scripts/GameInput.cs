@@ -78,14 +78,15 @@ public class GameInput : MonoBehaviour
 
             // The player may hold the phone upright or flat, so forward/back is the pitch angle
             // compared with the pose held when the stage started (that pose = standing still).
-            // x is the left/right tilt. It is flipped because on the Galaxy A30 it came out reversed.
+            // x is the left/right tilt: positive means right, the same as the D key.
+            // PlayerController turns that into the right of the screen.
             if (!calibrated && a.sqrMagnitude > 0.25f)
             {
                 neutralPitch = Pitch(a);
                 calibrated = true;
             }
             float forward = calibrated ? Mathf.Sin(Pitch(a) - neutralPitch) : 0f;
-            Vector2 tilt = new Vector2(-a.x, forward);
+            Vector2 tilt = new Vector2(a.x, forward);
             if (invertTilt) tilt = -tilt;
             if (invertForwardBack) tilt.y = -tilt.y;
             tilt /= tiltRange;
