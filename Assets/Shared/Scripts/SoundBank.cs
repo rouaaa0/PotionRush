@@ -8,6 +8,7 @@ public static class SoundBank
     const int Rate = 22050;
     const float Tau = Mathf.PI * 2f;
 
+    // In the editor this list can outlive its sounds between two Play sessions, so a sound that is gone gets remade.
     static readonly Dictionary<string, AudioClip> cache = new Dictionary<string, AudioClip>();
 
     // A bright two-note "ping". Each ingredient has its own pitch.
@@ -15,7 +16,7 @@ public static class SoundBank
     {
         string key = "collect" + (int)type;
         AudioClip clip;
-        if (cache.TryGetValue(key, out clip)) return clip;
+        if (cache.TryGetValue(key, out clip) && clip != null) return clip;
 
         float f = 660f;
         switch (type)
@@ -41,7 +42,7 @@ public static class SoundBank
     public static AudioClip Brew()
     {
         AudioClip clip;
-        if (cache.TryGetValue("brew", out clip)) return clip;
+        if (cache.TryGetValue("brew", out clip) && clip != null) return clip;
 
         float[] data = new float[Mathf.CeilToInt(0.24f * Rate)];
         float phase = 0f;
@@ -58,7 +59,7 @@ public static class SoundBank
     public static AudioClip Win()
     {
         AudioClip clip;
-        if (cache.TryGetValue("win", out clip)) return clip;
+        if (cache.TryGetValue("win", out clip) && clip != null) return clip;
 
         float[] notes = { 523.25f, 659.25f, 783.99f, 1046.5f, 1318.5f };
         float[] starts = { 0f, 0.12f, 0.24f, 0.36f, 0.54f };
@@ -78,7 +79,7 @@ public static class SoundBank
     public static AudioClip Lose()
     {
         AudioClip clip;
-        if (cache.TryGetValue("lose", out clip)) return clip;
+        if (cache.TryGetValue("lose", out clip) && clip != null) return clip;
 
         System.Random random = new System.Random(7);
         float[] data = new float[Mathf.CeilToInt(1.8f * Rate)];
@@ -102,7 +103,7 @@ public static class SoundBank
     public static AudioClip Click()
     {
         AudioClip clip;
-        if (cache.TryGetValue("click", out clip)) return clip;
+        if (cache.TryGetValue("click", out clip) && clip != null) return clip;
 
         float[] data = new float[Mathf.CeilToInt(0.06f * Rate)];
         for (int i = 0; i < data.Length; i++)
@@ -118,7 +119,7 @@ public static class SoundBank
     public static AudioClip Music()
     {
         AudioClip clip;
-        if (cache.TryGetValue("music", out clip)) return clip;
+        if (cache.TryGetValue("music", out clip) && clip != null) return clip;
 
         float[][] pad =
         {

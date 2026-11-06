@@ -7,13 +7,14 @@ public static class DragonSounds
     const int Rate = 22050;
     const float Tau = Mathf.PI * 2f;
 
+    // In the editor this list can outlive its sounds between two Play sessions, so a sound that is gone gets remade.
     static readonly Dictionary<string, AudioClip> cache = new Dictionary<string, AudioClip>();
 
     // A low growl that rises and falls.
     public static AudioClip Roar()
     {
         AudioClip clip;
-        if (cache.TryGetValue("roar", out clip)) return clip;
+        if (cache.TryGetValue("roar", out clip) && clip != null) return clip;
 
         const float length = 1.3f;
         System.Random random = new System.Random(6);
@@ -39,7 +40,7 @@ public static class DragonSounds
     public static AudioClip Whoosh()
     {
         AudioClip clip;
-        if (cache.TryGetValue("whoosh", out clip)) return clip;
+        if (cache.TryGetValue("whoosh", out clip) && clip != null) return clip;
 
         const float length = 0.5f;
         System.Random random = new System.Random(3);
@@ -59,7 +60,7 @@ public static class DragonSounds
     public static AudioClip Breath()
     {
         AudioClip clip;
-        if (cache.TryGetValue("breath", out clip)) return clip;
+        if (cache.TryGetValue("breath", out clip) && clip != null) return clip;
 
         const float length = 2.2f;
         System.Random random = new System.Random(9);
@@ -80,7 +81,7 @@ public static class DragonSounds
     public static AudioClip Boom()
     {
         AudioClip clip;
-        if (cache.TryGetValue("boom", out clip)) return clip;
+        if (cache.TryGetValue("boom", out clip) && clip != null) return clip;
 
         const float length = 0.6f;
         System.Random random = new System.Random(5);
