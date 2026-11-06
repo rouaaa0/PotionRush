@@ -49,6 +49,10 @@ public class HUD : MonoBehaviour
     int winScore;
     Text banner;
     float bannerTime;
+    GameObject quitButton;
+    GameObject continueButton;
+    Color titleColor;
+    bool paused;
 
     void Start()
     {
@@ -68,6 +72,7 @@ public class HUD : MonoBehaviour
         resultPanel.SetActive(false);
         card = resultPanel.transform.Find("Card");
         BuildObjectives();
+        BuildPauseButtons(); // before the listeners below: a copied button must not do what the original does
 
         stage.BrewProgressed += OnBrewProgressed;
         stage.StageWon += OnWon;
@@ -93,10 +98,65 @@ public class HUD : MonoBehaviour
 
     void OnDestroy()
     {
+        Time.timeScale = 1f; // leaving the stage from the pause card must not freeze the next scene
         if (stage == null) return;
         stage.BrewProgressed -= OnBrewProgressed;
         stage.StageWon -= OnWon;
         stage.StageLost -= OnLost;
+    }
+
+    // A "Quitter" button under the timer. It pauses the game and shows the end card with
+    // Menu, Rejouer and Continuer, so a wrong tap doesn't lose the run. It copies the card's buttons to match them.
+    void BuildPauseButtons()
+    {
+        titleColor = resultTitle.color;
+
+        quitButton = Instantiate(menuButton.gameObject, transform);
+        quitButton.name = "QuitButton";
+        RectTransform rect = quitButton.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 1f);
+        rect.anchoredPosition = new Vector2(-30f, -165f);
+        rect.sizeDelta = new Vector2(220f, 72f);
+        Text quitLabel = quitButton.GetComponentInChildren<Text>();
+        quitLabel.text = "Quitter";
+        quitLabel.fontSize = 34;
+        quitButton.GetComponent<Button>().onClick.AddListener(Pause);
+
+        if (nextButton == null) return;
+        continueButton = Instantiate(nextButton.gameObject, nextButton.transform.parent);
+        continueButton.name = "ContinueButton";
+        continueButton.GetComponentInChildren<Text>().text = "Continuer";
+        continueButton.GetComponent<Button>().onClick.AddListener(Resume);
+        continueButton.SetActive(false);
+    }
+
+    void Pause()
+    {
+        if (stage.State != StageState.Playing) return;
+
+        paused = true;
+        Time.timeScale = 0f;
+        if (GameInput.Instance != null) GameInput.Instance.enabled = false; // a shake must not fill the brew while paused
+
+        ShowNextButton(true); // for its shadow, the Continuer button sits on top of it
+        nextButton.gameObject.SetActive(false);
+        continueButton.SetActive(true);
+        resultTitle.text = "Pause";
+        resultTitle.color = Color.white;
+        resultDetails.text = "";
+        resultPanel.SetActive(true);
+        popTime = 0f;
+    }
+
+    void Resume()
+    {
+        paused = false;
+        Time.timeScale = 1f;
+        if (GameInput.Instance != null) GameInput.Instance.enabled = true;
+
+        continueButton.SetActive(false);
+        resultTitle.color = titleColor;
+        resultPanel.SetActive(false);
     }
 
     // One row per recipe entry: a coloured dot, the name and a counter.
@@ -154,6 +214,7 @@ public class HUD : MonoBehaviour
 
     void Update()
     {
+        quitButton.SetActive(stage.State == StageState.Playing && !paused);
         scoreText.text = stage.Score.ToString();
 
         int seconds = Mathf.CeilToInt(stage.TimeLeft);
