@@ -50,7 +50,7 @@ public class DragonBoss : MonoBehaviour
     PlayerController player;
     CharacterController playerBody;
     HUD hud;
-    DragonLives wizardLives;
+    PlayerLives wizardLives;
     AudioSource voice;
     Mesh ringMesh;
     Mesh discMesh;
@@ -98,8 +98,8 @@ public class DragonBoss : MonoBehaviour
         }
         hud = FindFirstObjectByType<HUD>();
 
-        wizardLives = gameObject.AddComponent<DragonLives>();
-        wizardLives.Init(lives, stage, hud);
+        wizardLives = gameObject.AddComponent<PlayerLives>();
+        wizardLives.Init(lives, stage, hud, "Vaincu par le dragon");
 
         voice =gameObject.AddComponent<AudioSource>();
         voice.playOnAwake = false;

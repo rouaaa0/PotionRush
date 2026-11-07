@@ -68,6 +68,10 @@ public class FreezeVent : MonoBehaviour
         if (shell != null) shell.SetActive(true);
         Haptics.Tap(80);
 
+        // each freeze costs a heart (PlayerLives on the StageManager object); the last one ends the stage
+        PlayerLives lives = stage != null ? stage.GetComponent<PlayerLives>() : null;
+        if (lives != null) lives.LoseOne();
+
         yield return new WaitForSeconds(freezeTime);
 
         if (shell != null) shell.SetActive(false);

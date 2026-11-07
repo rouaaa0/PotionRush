@@ -2,12 +2,17 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-// The wizard's lives in the boss fight. The hearts are added under the objectives on the HUD.
-// When the last one is lost the stage ends, exactly as if the timer had run out,
-// and the end card says that the dragon won. The shared HUD and StageManager stay untouched.
-public class DragonLives : MonoBehaviour
+// The wizard's lives, for stages where the wizard can get hurt (the dragon's lair, the frozen cave).
+// The hearts are added under the objectives on the HUD. When the last one is lost the stage ends,
+// exactly as if the timer had run out, and the end card shows defeatTitle.
+// It can be put on an object in the scene (set lives and defeatTitle in the Inspector),
+// or added by a script that calls Init. The shared HUD and StageManager stay untouched.
+public class PlayerLives : MonoBehaviour
 {
     static readonly Color Full = new Color(1f, 0.25f, 0.25f, 1f);
+
+    public int lives = 3;
+    public string defeatTitle = "Plus de vies";
 
     public int Left { get; private set; }
 
@@ -17,13 +22,24 @@ public class DragonLives : MonoBehaviour
     Sprite heartSprite;
     bool built;
     bool killed;
+    bool initialized;
     string frozenTimer;
 
-    public void Init(int lives, StageManager stageManager, HUD hudOnScreen)
+    public void Init(int startLives, StageManager stageManager, HUD hudOnScreen, string title)
     {
-        Left = lives;
+        initialized = true;
+        lives = startLives;
+        Left = startLives;
         stage = stageManager;
         hud = hudOnScreen;
+        defeatTitle = title;
+    }
+
+    // placed in the scene by hand: find the stage and the HUD by itself
+    void Start()
+    {
+        if (initialized) return;
+        Init(lives, StageManager.Instance, FindAnyObjectByType<HUD>(), defeatTitle);
     }
 
     // Takes one life away. Returns true when it was the last one.
@@ -62,7 +78,7 @@ public class DragonLives : MonoBehaviour
             hud.timerText.text = frozenTimer;
             hud.timerText.color = Color.white;
             hud.timerText.transform.localScale = Vector3.one;
-            hud.resultTitle.text = "Vaincu par le dragon";
+            hud.resultTitle.text = defeatTitle;
         }
     }
 
