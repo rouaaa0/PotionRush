@@ -12,11 +12,11 @@ public static class Stage5TowerBuilder
 {
     const string StageFolder = "Assets/Stages/Stage5_Tower";
     const string ScenePath = StageFolder + "/Stage5_Tower.unity";
-    const string MaterialFolder = "Assets/Shared/Art";
+    const string MaterialFolder = StageFolder + "/Art";
     const string SourceScene = "Assets/Stages/Stage1_Lab/Stage1_Lab.unity";
     const string ConfigPath = "Assets/Shared/Data/FlyingPotion.asset";
     const string CrystalPrefab = "Assets/Shared/Prefabs/Crystal.prefab";
-    const string ScrollPrefab = "Assets/Shared/Prefabs/TowerScroll.prefab";
+    const string ScrollPrefab = StageFolder + "/Prefabs/TowerScroll.prefab";
 
     const float TowerRadius = 9f;
 
