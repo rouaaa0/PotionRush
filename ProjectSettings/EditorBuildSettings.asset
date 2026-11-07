@@ -18,6 +18,9 @@ EditorBuildSettings:
     path: Assets/Stages/Stage4_Library/Stage4_Library.unity
     guid: 200c5cebaf24d7e4ba0efc306e05f8d2
   - enabled: 1
+    path: Assets/Stages/Stage5_Tower/Stage5_Tower.unity
+    guid: 8684c64130b7dcf418d7d64c040a78da
+  - enabled: 1
     path: Assets/Stages/Stage6_Dragon/Stage6_Dragon.unity
     guid: 96badd28b9d234e0c93d35fcffc2e97a
   m_configObjects:
