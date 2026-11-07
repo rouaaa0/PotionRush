@@ -6,7 +6,7 @@ using UnityEngine;
 // - every crystal calls lightning onto a pillar and lights it up, every scroll wakes the rune circle
 // - when the recipe is complete, a column of light shows the way to the cauldron
 // - while brewing, the lit pillars fire lightning into the cauldron on every shake
-// - the potion of flight is done: the wizard grows wings and flies up as the storm clears
+// - the potion of flight is done: the storm clears (the shared VictoryFlight makes the wizard fly up)
 // - stones and pages caught in the storm circle the tower the whole time
 public class TowerSpectacle : MonoBehaviour
 {
@@ -304,7 +304,6 @@ public class TowerSpectacle : MonoBehaviour
         storm.PlayThunder(1f, 0.8f);
 
         StartCoroutine(ClearSky());
-        StartCoroutine(FlyAway());
     }
 
     // The clouds turn gold, the rain stops and warm light comes back.
@@ -344,67 +343,5 @@ public class TowerSpectacle : MonoBehaviour
 
             yield return null;
         }
-    }
-
-    // The wizard drinks the potion of flight: wings appear and a spiral of gold carries them up.
-    // The camera follows the player, so the tower falls away below.
-    IEnumerator FlyAway()
-    {
-        yield return new WaitForSeconds(0.5f);
-
-        // the CharacterController must be off, or it overrides a direct position change
-        CharacterController controller = player.GetComponent<CharacterController>();
-        if (controller != null) controller.enabled = false;
-
-        Transform model = player.Find("Model");
-        Transform leftWing = BuildWing(model, -1f);
-        Transform rightWing = BuildWing(model, 1f);
-
-        Vector3 start = player.position;
-        float trailTimer = 0f;
-
-        for (float t = 0f; ; t += Time.deltaTime)
-        {
-            float k = Mathf.SmoothStep(0f, 1f, t / 2.2f);
-            float angle = t * 1.4f;
-            float height = k * 7f + Mathf.Sin(t * 2.2f) * 0.15f * k;
-            Vector3 circle = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle)) * (k * 2.2f);
-            player.position = start + Vector3.up * height + circle;
-            player.rotation = Quaternion.Euler(0f, angle * Mathf.Rad2Deg + 90f, 0f);
-
-            float grow = Mathf.Clamp01(t / 0.3f);
-            float flap = Mathf.Sin(t * 14f) * 35f;
-            SetWing(leftWing, -flap, grow);
-            SetWing(rightWing, flap, grow);
-
-            trailTimer -= Time.deltaTime;
-            if (trailTimer <= 0f)
-            {
-                trailTimer = 0.06f;
-                TowerStorm.SpawnSparks(player.position + Vector3.up * 0.8f, 2, goldMaterial);
-            }
-
-            yield return null;
-        }
-    }
-
-    Transform BuildWing(Transform model, float side)
-    {
-        Transform pivot = new GameObject("WingPivot").transform;
-        pivot.SetParent(model, false);
-        pivot.localPosition = new Vector3(side * 0.2f, 1.05f, -0.15f);
-
-        GameObject wing = TowerStorm.Visual(PrimitiveType.Sphere, goldMaterial, pivot);
-        wing.transform.localPosition = new Vector3(side * 0.55f, 0f, 0f);
-        wing.transform.localScale = new Vector3(1f, 0.05f, 0.45f);
-
-        pivot.localScale = Vector3.zero;
-        return pivot;
-    }
-
-    static void SetWing(Transform pivot, float flap, float size)
-    {
-        pivot.localRotation = Quaternion.Euler(0f, 0f, flap);
-        pivot.localScale = Vector3.one * size;
     }
 }

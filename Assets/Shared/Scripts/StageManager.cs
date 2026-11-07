@@ -29,6 +29,9 @@ public class StageManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
+
+        // every stage ends the same way: the wizard grows wings and flies off when the potion is done
+        if (GetComponent<VictoryFlight>() == null) gameObject.AddComponent<VictoryFlight>();
     }
 
     void Start()
