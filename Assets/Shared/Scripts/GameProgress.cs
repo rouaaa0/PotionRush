@@ -7,9 +7,9 @@ public static class GameProgress
 {
     const string UnlockAllKey = "unlock_all";
 
-    // While the game is being built, every stage can be picked from the menu.
-    // Set this to false for the final game, so a stage opens only after the one before it is won.
-    const bool PickAnyStage = true;
+    // true opens every stage from the menu (handy while building). The game ships with false:
+    // a stage opens only after the one before it is won.
+    const bool PickAnyStage = false;
 
     // Demo switch: opens every stage. Toggled by tapping the title in the main menu 5 times.
     public static bool UnlockAll
