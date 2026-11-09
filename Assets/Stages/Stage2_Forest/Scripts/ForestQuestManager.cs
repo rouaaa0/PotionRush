@@ -176,11 +176,16 @@ public class ForestQuestManager : MonoBehaviour
             case 2:
                 SetActive(scenario2Root, true);
                 RegisterIngredientIcons(scenario2Root);
+                // Register the monster on the minimap (icon type 99)
+                ForestMonster monster = scenario2Root.GetComponentInChildren<ForestMonster>(true);
+                if (monster != null)
+                    MinimapIcons.Add((monster.transform, 99));
+
                 SetRecipe(new[] {
                     (IngredientType.Herb,    3),
                     (IngredientType.Crystal, 1)
                 });
-                QuestBannerText = "Find 3 herbs & 1 crystal";
+                QuestBannerText = "Fuyez le monstre ! (3 herbes & 1 cristal)";
                 break;
 
             case 3:

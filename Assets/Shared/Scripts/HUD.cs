@@ -368,7 +368,7 @@ public class HUD : MonoBehaviour
         resultPanel.SetActive(true);
         if (nextButton != null) nextButton.gameObject.SetActive(false);
         popTime = 0f;
-        resultTitle.text = "Temps écoulé";
+        resultTitle.text = !string.IsNullOrEmpty(stage.FailReason) ? stage.FailReason : "Temps écoulé";
         resultTitle.color = new Color(1f, 0.3f, 0.25f, 1f);
         resultDetails.text = "Score   " + stage.Score;
     }

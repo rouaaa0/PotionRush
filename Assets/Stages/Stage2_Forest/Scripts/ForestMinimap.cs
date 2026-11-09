@@ -266,6 +266,11 @@ public class ForestMinimap : MonoBehaviour
             case 10: // Runic monolith
                 color = new Color(0.35f, 1.0f, 0.70f, 1f); // Mint rune glow
                 break;
+            case 99: // Monster (menacing crimson skull/threat icon)
+                color = new Color(1.0f, 0.15f, 0.15f, 1f);
+                spr   = diamondSprite;
+                size  = IconSize + 6f;
+                break;
             default:
                 color = Color.white;
                 break;
@@ -273,8 +278,8 @@ public class ForestMinimap : MonoBehaviour
 
         Image img = MakeImage(iconContainer, $"Icon_{type}", spr, color, size, size);
 
-        // Put cauldron and player on top of ingredient dots
-        if (type == -1)
+        // Put cauldron, monster and player on top of ingredient dots
+        if (type == -1 || type == 99)
             img.transform.SetAsLastSibling();
 
         return img;
@@ -306,6 +311,13 @@ public class ForestMinimap : MonoBehaviour
 
             icon.rectTransform.anchoredPosition = uiPos;
             icon.enabled = true;
+
+            // Pulse monster threat icon aggressively on minimap
+            if (type == 99)
+            {
+                float pulse = 1f + Mathf.Sin(Time.time * 8f) * 0.22f;
+                icon.rectTransform.sizeDelta = new Vector2(IconSize + 6f, IconSize + 6f) * pulse;
+            }
         }
 
         // Keep player arrow at the exact center and on top

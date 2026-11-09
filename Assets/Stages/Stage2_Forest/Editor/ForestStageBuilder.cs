@@ -137,8 +137,9 @@ public static class ForestStageBuilder
         s2.transform.SetParent(questManagerObj.transform, false);
         s2.SetActive(false);  // hidden until Scenario 2
 
-        BuildHedgeLabyrinth(s2);       // creates fence cubes inside s2
-        BuildHerbIngredients(s2, crystalPrefab);  // creates Herb objects + 1 Crystal
+        BuildHedgeLabyrinth(s2);                  // creates fence cubes inside s2
+        BuildHerbIngredients(s2, crystalPrefab); // creates Herb objects + 1 Crystal
+        BuildMonster(s2);                         // adds the monster pursuing the player in Scenario 2
 
         // --- Scenario 3 root: 3 runic monoliths ---------------------------------------
         GameObject s3 = new GameObject("Scenario3_Monoliths");
@@ -279,6 +280,72 @@ public static class ForestStageBuilder
             c.transform.SetParent(parent.transform, false);
             c.transform.position = new Vector3(5.5f, 0f, -3.5f);
         }
+    }
+
+    // Scenario 2 – forest stalker monster pursuing the player in the labyrinth.
+    static void BuildMonster(GameObject parent)
+    {
+        Material bodyMat = GetLitMaterial("MonsterBark",
+            new Color(0.12f, 0.08f, 0.08f), 0.1f, 0.1f, 0.2f, new Color(0.35f, 0.05f, 0.05f));
+        Material eyeMat = GetLitMaterial("MonsterEyes",
+            new Color(1.0f, 0.05f, 0.05f), 0.5f, 0f, 4.0f, new Color(1.0f, 0.1f, 0.1f));
+
+        GameObject monsterRoot = new GameObject("ForestMonster");
+        monsterRoot.transform.SetParent(parent.transform, false);
+        // Spawn in northern hedge corridor (-8 on Z), far from player's starting area (+7.5 on Z)
+        monsterRoot.transform.position = new Vector3(0f, 0f, -8f);
+
+        // Visual model container
+        GameObject model = new GameObject("Model");
+        model.transform.SetParent(monsterRoot.transform, false);
+
+        // Torso (hunched dark brier beast)
+        Part(model, PrimitiveType.Cube, "Torso",
+            new Vector3(0f, 1.25f, 0f), new Vector3(1.1f, 1.3f, 0.85f), new Vector3(8f, 0f, 0f), bodyMat, false);
+
+        // Head
+        GameObject head = Part(model, PrimitiveType.Cube, "Head",
+            new Vector3(0f, 2.1f, 0.2f), new Vector3(0.75f, 0.65f, 0.75f), new Vector3(12f, 0f, 0f), bodyMat, false);
+
+        // Menacing red glowing eyes
+        Part(head, PrimitiveType.Sphere, "Eye_L",
+            new Vector3(-0.2f, 0.08f, 0.38f), new Vector3(0.18f, 0.18f, 0.18f), Vector3.zero, eyeMat, false);
+        Part(head, PrimitiveType.Sphere, "Eye_R",
+            new Vector3(0.2f, 0.08f, 0.38f), new Vector3(0.18f, 0.18f, 0.18f), Vector3.zero, eyeMat, false);
+
+        // Spikes on head
+        Part(head, PrimitiveType.Cylinder, "Horn_L",
+            new Vector3(-0.35f, 0.42f, -0.1f), new Vector3(0.1f, 0.35f, 0.1f), new Vector3(-25f, -20f, 0f), bodyMat, false);
+        Part(head, PrimitiveType.Cylinder, "Horn_R",
+            new Vector3(0.35f, 0.42f, -0.1f), new Vector3(0.1f, 0.35f, 0.1f), new Vector3(-25f, 20f, 0f), bodyMat, false);
+
+        // Left Arm with pivot for running swing animation
+        GameObject leftArmPivot = new GameObject("LeftArm");
+        leftArmPivot.transform.SetParent(model.transform, false);
+        leftArmPivot.transform.localPosition = new Vector3(-0.75f, 1.6f, 0f);
+        Part(leftArmPivot, PrimitiveType.Cylinder, "L_ArmMesh",
+            new Vector3(0f, -0.55f, 0.1f), new Vector3(0.22f, 0.55f, 0.22f), new Vector3(15f, 0f, -10f), bodyMat, false);
+
+        // Right Arm with pivot
+        GameObject rightArmPivot = new GameObject("RightArm");
+        rightArmPivot.transform.SetParent(model.transform, false);
+        rightArmPivot.transform.localPosition = new Vector3(0.75f, 1.6f, 0f);
+        Part(rightArmPivot, PrimitiveType.Cylinder, "R_ArmMesh",
+            new Vector3(0f, -0.55f, 0.1f), new Vector3(0.22f, 0.55f, 0.22f), new Vector3(15f, 0f, 10f), bodyMat, false);
+
+        // Menacing red aura point light
+        GameObject lightGO = new GameObject("MonsterLight");
+        lightGO.transform.SetParent(monsterRoot.transform, false);
+        lightGO.transform.localPosition = new Vector3(0f, 1.4f, 0.3f);
+        Light mLight = lightGO.AddComponent<Light>();
+        mLight.type      = LightType.Point;
+        mLight.color     = new Color(1.0f, 0.12f, 0.08f);
+        mLight.range     = 6.5f;
+        mLight.intensity = 3.0f;
+
+        // Controller component
+        ForestMonster monsterComp = monsterRoot.AddComponent<ForestMonster>();
+        monsterComp.Setup(mLight, model.transform, leftArmPivot.transform, rightArmPivot.transform);
     }
 
     // Scenario 3 – 3 runic monolith pillars in a triangle formation.
