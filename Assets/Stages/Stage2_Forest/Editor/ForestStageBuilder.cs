@@ -499,22 +499,22 @@ public static class ForestStageBuilder
         CreateFairyLantern(shrineGroup, "ShrineLantern_L", new Vector3(-1.8f, 0f, 2.0f), matLanternWood, matLanternGlow);
         CreateFairyLantern(shrineGroup, "ShrineLantern_R", new Vector3(1.8f, 0f, 2.0f), matLanternWood, matLanternGlow);
 
-        // Subgroup 3: Enchanted Trees
+        // Subgroup 3: Enchanted Trees (scaled down & pushed to perimeter for crystal-clear camera view)
         GameObject treesGroup = new GameObject("EnchantedTrees");
         treesGroup.transform.SetParent(root.transform, false);
-        CreateEnchantedTree(treesGroup, "Tree_1", new Vector3(4.5f, 0f, 7.0f), 1.2f, matBark, matFoliageEmerald, matFoliageLime);
-        CreateEnchantedTree(treesGroup, "Tree_2", new Vector3(-4.5f, 0f, 7.2f), 1.1f, matBark, matFoliageLime, matFoliageAutumn);
-        CreateEnchantedTree(treesGroup, "Tree_3", new Vector3(5.5f, 0f, -4.5f), 1.3f, matBark, matFoliageAutumn, matFoliageEmerald);
-        CreateEnchantedTree(treesGroup, "Tree_4", new Vector3(-7.5f, 0f, -4.0f), 1.2f, matBark, matFoliageEmerald, matFoliageLime);
-        CreateEnchantedTree(treesGroup, "Tree_5", new Vector3(2.5f, 0f, -7.8f), 1.1f, matBark, matFoliageLime, matFoliageEmerald);
+        CreateEnchantedTree(treesGroup, "Tree_1", new Vector3( 7.5f, 0f,  6.2f), 0.70f, matBark, matFoliageEmerald, matFoliageLime);
+        CreateEnchantedTree(treesGroup, "Tree_2", new Vector3(-7.5f, 0f,  6.2f), 0.70f, matBark, matFoliageLime, matFoliageAutumn);
+        CreateEnchantedTree(treesGroup, "Tree_3", new Vector3( 8.0f, 0f, -4.5f), 0.75f, matBark, matFoliageAutumn, matFoliageEmerald);
+        CreateEnchantedTree(treesGroup, "Tree_4", new Vector3(-8.2f, 0f, -4.0f), 0.75f, matBark, matFoliageEmerald, matFoliageLime);
+        CreateEnchantedTree(treesGroup, "Tree_5", new Vector3( 3.5f, 0f, -8.5f), 0.70f, matBark, matFoliageLime, matFoliageEmerald);
 
-        // Subgroup 4: Giant Mushrooms
+        // Subgroup 4: Giant Mushrooms (scaled down)
         GameObject shroomsGroup = new GameObject("GiantMushrooms");
         shroomsGroup.transform.SetParent(root.transform, false);
-        CreateGiantMushroom(shroomsGroup, "Mushroom_Purple_1", new Vector3(7.8f, 0f, 3.5f), 1.3f, matMushStem, matMushCapPurple, new Color(0.6f, 0.25f, 0.85f));
-        CreateGiantMushroom(shroomsGroup, "Mushroom_Cyan_1", new Vector3(5.2f, 0f, 4.2f), 0.9f, matMushStem, matMushCapCyan, new Color(0.2f, 0.75f, 0.7f));
-        CreateGiantMushroom(shroomsGroup, "Mushroom_Cyan_2", new Vector3(8.2f, 0f, 1.2f), 1.0f, matMushStem, matMushCapCyan, new Color(0.2f, 0.75f, 0.7f));
-        CreateGiantMushroom(shroomsGroup, "Mushroom_Purple_2", new Vector3(-5.8f, 0f, -7.0f), 1.1f, matMushStem, matMushCapPurple, new Color(0.6f, 0.25f, 0.85f));
+        CreateGiantMushroom(shroomsGroup, "Mushroom_Purple_1", new Vector3(7.8f, 0f, 3.5f), 0.85f, matMushStem, matMushCapPurple, new Color(0.6f, 0.25f, 0.85f));
+        CreateGiantMushroom(shroomsGroup, "Mushroom_Cyan_1", new Vector3(5.2f, 0f, 4.2f), 0.70f, matMushStem, matMushCapCyan, new Color(0.2f, 0.75f, 0.7f));
+        CreateGiantMushroom(shroomsGroup, "Mushroom_Cyan_2", new Vector3(8.2f, 0f, 1.2f), 0.75f, matMushStem, matMushCapCyan, new Color(0.2f, 0.75f, 0.7f));
+        CreateGiantMushroom(shroomsGroup, "Mushroom_Purple_2", new Vector3(-5.8f, 0f, -7.0f), 0.80f, matMushStem, matMushCapPurple, new Color(0.6f, 0.25f, 0.85f));
 
         // Subgroup 5: Enchanted Pond & Rocks
         GameObject pondGroup = new GameObject("EnchantedPond");
@@ -548,23 +548,24 @@ public static class ForestStageBuilder
         CreateFallenLog(propsGroup, "FallenLog_2", new Vector3(-3.5f, 0.3f, 3.8f), new Vector3(0.5f, 2.5f, 0.5f), new Vector3(90f, -40f, 0f), matBark);
 
         // Subgroup 8: Forest Boundaries (Natural impassable tree/rock ring)
+        // South boundary pushed to z = 17.5f so it never blocks the camera view!
         GameObject boundsGroup = new GameObject("ForestBoundaries");
         boundsGroup.transform.SetParent(root.transform, false);
 
         for (float x = -13f; x <= 13f; x += 3.5f)
         {
-            CreateEnchantedTree(boundsGroup, "Bound_S_Tree_" + x, new Vector3(x, 0f, 12.5f), 1.4f, matBark, matFoliageEmerald, matFoliageLime);
-            CreateRock(boundsGroup, "Bound_S_Rock_" + x, new Vector3(x + 1.2f, 0f, 11.5f), new Vector3(2.2f, 1.8f, 1.8f), matStone);
-            CreateEnchantedTree(boundsGroup, "Bound_N_Tree_" + x, new Vector3(x, 0f, -12.5f), 1.4f, matBark, matFoliageEmerald, matFoliageAutumn);
-            CreateRock(boundsGroup, "Bound_N_Rock_" + x, new Vector3(x + 1.5f, 0f, -11.5f), new Vector3(2.2f, 1.8f, 1.8f), matStone);
+            CreateEnchantedTree(boundsGroup, "Bound_S_Tree_" + x, new Vector3(x, 0f, 17.5f), 0.85f, matBark, matFoliageEmerald, matFoliageLime);
+            CreateRock(boundsGroup, "Bound_S_Rock_" + x, new Vector3(x + 1.2f, 0f, 16.5f), new Vector3(2.0f, 1.5f, 1.8f), matStone);
+            CreateEnchantedTree(boundsGroup, "Bound_N_Tree_" + x, new Vector3(x, 0f, -13.0f), 0.90f, matBark, matFoliageEmerald, matFoliageAutumn);
+            CreateRock(boundsGroup, "Bound_N_Rock_" + x, new Vector3(x + 1.5f, 0f, -12.0f), new Vector3(2.0f, 1.5f, 1.8f), matStone);
         }
 
         for (float z = -12f; z <= 12f; z += 3.5f)
         {
-            CreateEnchantedTree(boundsGroup, "Bound_E_Tree_" + z, new Vector3(13.0f, 0f, z), 1.4f, matBark, matFoliageLime, matFoliageEmerald);
-            CreateRock(boundsGroup, "Bound_E_Rock_" + z, new Vector3(11.8f, 0f, z + 1.0f), new Vector3(1.8f, 1.8f, 2.2f), matStone);
-            CreateEnchantedTree(boundsGroup, "Bound_W_Tree_" + z, new Vector3(-13.0f, 0f, z), 1.4f, matBark, matFoliageAutumn, matFoliageEmerald);
-            CreateRock(boundsGroup, "Bound_W_Rock_" + z, new Vector3(-11.8f, 0f, z + 1.0f), new Vector3(1.8f, 1.8f, 2.2f), matStone);
+            CreateEnchantedTree(boundsGroup, "Bound_E_Tree_" + z, new Vector3(13.5f, 0f, z), 0.90f, matBark, matFoliageLime, matFoliageEmerald);
+            CreateRock(boundsGroup, "Bound_E_Rock_" + z, new Vector3(12.2f, 0f, z + 1.0f), new Vector3(1.8f, 1.5f, 2.0f), matStone);
+            CreateEnchantedTree(boundsGroup, "Bound_W_Tree_" + z, new Vector3(-13.5f, 0f, z), 0.90f, matBark, matFoliageAutumn, matFoliageEmerald);
+            CreateRock(boundsGroup, "Bound_W_Rock_" + z, new Vector3(-12.2f, 0f, z + 1.0f), new Vector3(1.8f, 1.5f, 2.0f), matStone);
         }
 
         // Save as standard Unity Prefab
@@ -590,17 +591,18 @@ public static class ForestStageBuilder
         tree.transform.SetParent(parent.transform, false);
         tree.transform.position = pos;
 
-        float trunkHeight = 3.6f * scale;
-        float trunkRadius = 0.55f * scale;
+        float trunkHeight = 2.2f * scale;
+        float trunkRadius = 0.32f * scale;
         Part(tree, PrimitiveType.Cylinder, "Trunk", new Vector3(0f, trunkHeight * 0.5f, 0f), new Vector3(trunkRadius * 2f, trunkHeight * 0.5f, trunkRadius * 2f), Vector3.zero, trunkMat, true);
 
-        Part(tree, PrimitiveType.Cube, "RootA", new Vector3(trunkRadius * 0.7f, 0.2f, 0f), new Vector3(trunkRadius * 1.6f, 0.4f, trunkRadius * 0.8f), new Vector3(0f, 25f, -15f), trunkMat, false);
-        Part(tree, PrimitiveType.Cube, "RootB", new Vector3(-trunkRadius * 0.7f, 0.2f, trunkRadius * 0.5f), new Vector3(trunkRadius * 1.5f, 0.4f, trunkRadius * 0.8f), new Vector3(0f, -40f, 15f), trunkMat, false);
+        Part(tree, PrimitiveType.Cube, "RootA", new Vector3(trunkRadius * 0.7f, 0.15f, 0f), new Vector3(trunkRadius * 1.4f, 0.3f, trunkRadius * 0.7f), new Vector3(0f, 25f, -15f), trunkMat, false);
+        Part(tree, PrimitiveType.Cube, "RootB", new Vector3(-trunkRadius * 0.7f, 0.15f, trunkRadius * 0.5f), new Vector3(trunkRadius * 1.3f, 0.3f, trunkRadius * 0.7f), new Vector3(0f, -40f, 15f), trunkMat, false);
 
-        float crownY = trunkHeight * 0.85f;
-        Part(tree, PrimitiveType.Sphere, "FoliageA", new Vector3(0f, crownY, 0f), Vector3.one * (3.4f * scale), Vector3.zero, crownMatA, false);
-        Part(tree, PrimitiveType.Sphere, "FoliageB", new Vector3(0.5f * scale, crownY + 1.0f * scale, 0.3f * scale), Vector3.one * (2.6f * scale), Vector3.zero, crownMatB, false);
-        Part(tree, PrimitiveType.Sphere, "FoliageC", new Vector3(-0.6f * scale, crownY + 0.6f * scale, -0.4f * scale), Vector3.one * (2.4f * scale), Vector3.zero, crownMatA, false);
+        float crownY = trunkHeight * 0.90f;
+        // Compact stylized foliage spheres so the camera has a clear, unobstructed sightline!
+        Part(tree, PrimitiveType.Sphere, "FoliageA", new Vector3(0f, crownY, 0f), Vector3.one * (1.75f * scale), Vector3.zero, crownMatA, false);
+        Part(tree, PrimitiveType.Sphere, "FoliageB", new Vector3(0.4f * scale, crownY + 0.6f * scale, 0.2f * scale), Vector3.one * (1.35f * scale), Vector3.zero, crownMatB, false);
+        Part(tree, PrimitiveType.Sphere, "FoliageC", new Vector3(-0.4f * scale, crownY + 0.4f * scale, -0.3f * scale), Vector3.one * (1.15f * scale), Vector3.zero, crownMatA, false);
     }
 
     static void CreateGiantMushroom(GameObject parent, string name, Vector3 pos, float scale, Material stemMat, Material capMat, Color lightColor)
