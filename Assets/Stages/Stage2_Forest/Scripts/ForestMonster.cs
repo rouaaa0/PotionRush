@@ -138,6 +138,21 @@ public class ForestMonster : MonoBehaviour
             if (player == null) return;
         }
 
+        // ── CAULDRON SAFE ZONE ───────────────────────────────────────
+        // When the wizard is brewing at the cauldron, the ghost CANNOT
+        // catch him. It backs off and returns to its patrol behavior.
+        if (StageManager.Instance != null && StageManager.Instance.Brewing)
+        {
+            // If we were chasing, cancel the chase and go back to guard patrol
+            if (currentMode == MonsterMode.ChasePlayer)
+                currentMode = MonsterMode.GuardCauldron;
+
+            // Keep floating animation but NOT the aggressive chase animation
+            AnimateVisuals(false);
+            return; // skip catch-check and pursuit entirely
+        }
+        // ─────────────────────────────────────────────────────────────
+
         Vector3 playerPos = player.transform.position;
         Vector3 myPos = transform.position;
 
@@ -179,7 +194,10 @@ public class ForestMonster : MonoBehaviour
                                                       new Vector3(cauldronPos.x, 0f, cauldronPos.z));
 
         // Player entered cauldron area or came too close to the monster!
-        if (distToPlayer <= detectRange || distPlayerToCauldron <= 5.5f)
+        // EXCEPTION: If the wizard is safely brewing at the cauldron, the ghost
+        // must NOT start chasing him — the cauldron is a sanctuary.
+        bool wizardIsSafe = StageManager.Instance != null && StageManager.Instance.Brewing;
+        if (!wizardIsSafe && (distToPlayer <= detectRange || distPlayerToCauldron <= 5.5f))
         {
             currentMode = MonsterMode.ChasePlayer;
             return;
@@ -350,6 +368,11 @@ public class ForestMonster : MonoBehaviour
     void CatchPlayer()
     {
         if (caught) return;
+
+        // Double-check: wizard is safe if he's currently brewing at the cauldron
+        if (StageManager.Instance != null && StageManager.Instance.Brewing)
+            return;
+
         caught = true;
 
         Debug.Log("[ForestMonster] Player caught by ghost! Defeat!");
