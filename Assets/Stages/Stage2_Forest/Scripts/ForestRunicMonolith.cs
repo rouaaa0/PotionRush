@@ -18,6 +18,7 @@ public class ForestRunicMonolith : MonoBehaviour
     // Visual components – assigned in Start() from child objects.
     Light pointLight;
     Renderer[] stoneRenderers;
+    PlayerController player;
 
     // State
     bool activated = false;
@@ -28,6 +29,8 @@ public class ForestRunicMonolith : MonoBehaviour
 
     void Start()
     {
+        player = FindFirstObjectByType<PlayerController>();
+
         // Grab point light and all renderers on this pillar.
         pointLight    = GetComponentInChildren<Light>();
         stoneRenderers = GetComponentsInChildren<Renderer>();
@@ -45,9 +48,11 @@ public class ForestRunicMonolith : MonoBehaviour
     {
         if (activated) return;
 
-        // Find the player by tag.
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player == null) return;
+        if (player == null)
+        {
+            player = FindFirstObjectByType<PlayerController>();
+            if (player == null) return;
+        }
 
         float dist = Vector3.Distance(transform.position, player.transform.position);
         if (dist <= activateRadius)

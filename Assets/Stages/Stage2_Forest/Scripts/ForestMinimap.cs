@@ -6,75 +6,80 @@ using UnityEngine.UI;
 //  ForestMinimap  –  Stage 2 Enchanted Forest
 //
 //  Creates a circular "fantasy radar" minimap in the top-right
-//  corner of the screen entirely in C# (no prefab required).
+//  corner of the screen, placed cleanly below the HUD timer.
+//  Scales automatically with screen resolution (1920x1080 canvas).
 //
 //  Map shows:
-//    White  triangle   = Player
-//    Orange filled dot = Mushroom
-//    Cyan   square     = Crystal
-//    Green  filled dot = Herb
-//    Gold   diamond    = Cauldron  (icon type -1)
-//    Bright green dot  = Runic Monolith (icon type 10)
+//    White  Arrow      = Player (rotates with player heading)
+//    Orange dot        = Mushroom
+//    Cyan   diamond    = Crystal
+//    Green  dot        = Herb
+//    Gold   star       = Cauldron  (icon type -1)
+//    Mint   glow dot   = Runic Monolith (icon type 10)
 //
-//  Below the circle a yellow banner shows the current quest hint
-//  read from ForestQuestManager.QuestBannerText.
+//  Below the compass, a dark ornate card displays:
+//    "SCENARIO X / 4"
+//    Current objective text from ForestQuestManager
 // ============================================================
 public class ForestMinimap : MonoBehaviour
 {
-    // ── tuneable constants ─────────────────────────────────────
-    const float MapWorldRadius  = 22f;   // how many metres from player edge shows
-    const float DisplayRadius   = 72f;   // radius of the circle in pixels
-    const float IconSize        = 14f;   // pixel size of each icon sprite
-    const float PlayerIconSize  = 16f;
-    const float BorderThickness = 5f;
+    // ── dimensions & tuneables ─────────────────────────────────
+    const float MapWorldRadius  = 20f;   // world metres from player to edge
+    const float DisplayRadius   = 85f;   // radius of the circle in reference UI pixels
+    const float IconSize        = 22f;   // pixel size of objective icons
+    const float PlayerIconSize  = 26f;   // pixel size of player arrow
+    const float BorderThickness = 5f;    // gold border ring thickness
 
-    // ── references – found / created at runtime ────────────────
+    // ── UI components ──────────────────────────────────────────
     Canvas     minimapCanvas;
-    RectTransform circleContainer;  // parent that clips icons to the circle
-    Image      bgImage;             // dark circle background
-    Image      borderImage;         // gold ring
-    Image      playerIcon;          // white triangle
-    Text       questText;           // banner below the circle
-    Text       scenarioLabel;       // "Scenario X/4" small label
+    RectTransform iconContainer;
+    Image      bgImage;
+    Image      borderImage;
+    Image      playerIcon;
+    Text       questText;
+    Text       scenarioLabel;
 
-    // Icon pool: one Image per tracked transform.
     readonly List<(Transform target, int type, Image icon)> trackedIcons
         = new List<(Transform, int, Image)>();
 
-    // Cached materials/sprites built once.
     Sprite circleSprite;
-    Sprite squareSprite;
+    Sprite diamondSprite;
+    Sprite arrowSprite;
 
-    // ── player reference ───────────────────────────────────────
     Transform playerTransform;
-
-    // ── Unity lifecycle ────────────────────────────────────────
 
     void Start()
     {
-        // Build sprites from plain Texture2D shapes.
-        circleSprite = MakeCircleSprite(64);
-        squareSprite = MakeSquareSprite(32);
+        circleSprite  = MakeCircleSprite(64);
+        diamondSprite = MakeDiamondSprite(32);
+        arrowSprite   = MakeArrowSprite(32);
 
         BuildCanvas();
 
-        // Find the player.
-        GameObject p = GameObject.FindGameObjectWithTag("Player");
-        if (p != null) playerTransform = p.transform;
+        FindPlayer();
+    }
+
+    void FindPlayer()
+    {
+        PlayerController pc = FindFirstObjectByType<PlayerController>();
+        if (pc != null)
+        {
+            playerTransform = pc.transform;
+            return;
+        }
+
+        GameObject go = GameObject.Find("Player");
+        if (go != null) playerTransform = go.transform;
     }
 
     void Update()
     {
-        // Keep the tracked list in sync with ForestQuestManager.
+        if (playerTransform == null)
+            FindPlayer();
+
         SyncIconList();
-
-        // Update icon positions each frame.
         UpdateIcons();
-
-        // Rotate the player icon to match heading.
         UpdatePlayerArrow();
-
-        // Update quest text.
         UpdateQuestText();
     }
 
@@ -82,82 +87,123 @@ public class ForestMinimap : MonoBehaviour
 
     void BuildCanvas()
     {
-        // A separate canvas so we don't modify the shared HUD prefab.
+        // Standalone Canvas scaled to 1920x1080, matching HUD
         GameObject canvasGO = new GameObject("ForestMinimapCanvas");
         minimapCanvas = canvasGO.AddComponent<Canvas>();
         minimapCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        minimapCanvas.sortingOrder = 10;   // on top of HUD
-        canvasGO.AddComponent<CanvasScaler>().uiScaleMode
-            = CanvasScaler.ScaleMode.ConstantPixelSize;
+        minimapCanvas.sortingOrder = 15; // Renders above standard HUD layers
+
+        CanvasScaler scaler = canvasGO.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        // ── Outer container anchored top-right ─────────────────
+        // ── Outer container anchored top-right below HUD timer ─
+        // In HUD, TEMPS is at (-30, -30), width 260, height 116 (bottom at y = -146).
+        // We place the minimap at (-40, -165) so it never overlaps!
         GameObject outerGO = new GameObject("MinimapAnchor");
         outerGO.transform.SetParent(canvasGO.transform, false);
         RectTransform outer = outerGO.AddComponent<RectTransform>();
         outer.anchorMin  = new Vector2(1f, 1f);
         outer.anchorMax  = new Vector2(1f, 1f);
         outer.pivot      = new Vector2(1f, 1f);
-        float totalH     = DisplayRadius * 2f + BorderThickness * 2f + 32f; // circle + banner
-        outer.sizeDelta  = new Vector2(DisplayRadius * 2f + BorderThickness * 2f + 10f, totalH);
-        outer.anchoredPosition = new Vector2(-10f, -10f);
+        float circleDiameter = (DisplayRadius + BorderThickness) * 2f; // 180px
+        float totalH = circleDiameter + 95f; // circle + quest card
+        outer.sizeDelta  = new Vector2(circleDiameter + 10f, totalH);
+        outer.anchoredPosition = new Vector2(-40f, -165f);
 
         // ── Gold border ring ───────────────────────────────────
-        float fullD = (DisplayRadius + BorderThickness) * 2f;
         borderImage = MakeImage(outerGO.transform, "MinimapBorder", circleSprite,
-            new Color(0.85f, 0.65f, 0.10f, 1f), fullD, fullD);
+            new Color(0.92f, 0.72f, 0.22f, 1f), circleDiameter, circleDiameter);
         RectTransform borderRT = borderImage.GetComponent<RectTransform>();
         borderRT.anchorMin = borderRT.anchorMax = new Vector2(0.5f, 1f);
         borderRT.pivot     = new Vector2(0.5f, 1f);
         borderRT.anchoredPosition = Vector2.zero;
 
-        // ── Dark green background circle ───────────────────────
+        // ── Dark forest background circle ──────────────────────
+        float innerD = DisplayRadius * 2f;
         bgImage = MakeImage(outerGO.transform, "MinimapBG", circleSprite,
-            new Color(0.04f, 0.14f, 0.07f, 0.88f), DisplayRadius * 2f, DisplayRadius * 2f);
+            new Color(0.04f, 0.12f, 0.07f, 0.94f), innerD, innerD);
         RectTransform bgRT = bgImage.GetComponent<RectTransform>();
         bgRT.anchorMin = bgRT.anchorMax = new Vector2(0.5f, 1f);
         bgRT.pivot     = new Vector2(0.5f, 1f);
         bgRT.anchoredPosition = new Vector2(0f, -BorderThickness);
 
-        // ── Container that clips icons (uses the circle as a mask) ──
-        GameObject containerGO = new GameObject("CircleContainer");
+        // ── Subtle crosshair / compass lines ───────────────────
+        GameObject crossH = new GameObject("Cross_H");
+        crossH.transform.SetParent(bgImage.transform, false);
+        Image hImg = crossH.AddComponent<Image>();
+        hImg.color = new Color(0.2f, 0.5f, 0.3f, 0.35f);
+        RectTransform hRT = crossH.GetComponent<RectTransform>();
+        hRT.sizeDelta = new Vector2(innerD * 0.85f, 1.5f);
+        hRT.anchoredPosition = Vector2.zero;
+
+        GameObject crossV = new GameObject("Cross_V");
+        crossV.transform.SetParent(bgImage.transform, false);
+        Image vImg = crossV.AddComponent<Image>();
+        vImg.color = new Color(0.2f, 0.5f, 0.3f, 0.35f);
+        RectTransform vRT = crossV.GetComponent<RectTransform>();
+        vRT.sizeDelta = new Vector2(1.5f, innerD * 0.85f);
+        vRT.anchoredPosition = Vector2.zero;
+
+        // ── Container for icons (clamped inside the circle) ───
+        GameObject containerGO = new GameObject("IconContainer");
         containerGO.transform.SetParent(outerGO.transform, false);
-        circleContainer = containerGO.AddComponent<RectTransform>();
-        circleContainer.anchorMin = circleContainer.anchorMax = new Vector2(0.5f, 1f);
-        circleContainer.pivot     = new Vector2(0.5f, 1f);
-        circleContainer.sizeDelta = new Vector2(DisplayRadius * 2f, DisplayRadius * 2f);
-        circleContainer.anchoredPosition = new Vector2(0f, -BorderThickness);
+        iconContainer = containerGO.AddComponent<RectTransform>();
+        iconContainer.anchorMin = iconContainer.anchorMax = new Vector2(0.5f, 1f);
+        iconContainer.pivot     = new Vector2(0.5f, 1f);
+        iconContainer.sizeDelta = new Vector2(innerD, innerD);
+        iconContainer.anchoredPosition = new Vector2(0f, -BorderThickness);
 
-        // Add a Mask so icons outside the circle are clipped.
-        Image maskImg = containerGO.AddComponent<Image>();
-        maskImg.sprite = circleSprite;
-        maskImg.color  = new Color(1f, 1f, 1f, 0f); // invisible but needed for mask
-        containerGO.AddComponent<Mask>().showMaskGraphic = false;
-
-        // ── Player icon (white triangle) ───────────────────────
-        playerIcon = MakeImage(circleContainer, "PlayerIcon", squareSprite,
+        // ── Player Arrow (white navigation triangle) ───────────
+        playerIcon = MakeImage(iconContainer, "PlayerIcon", arrowSprite,
             Color.white, PlayerIconSize, PlayerIconSize);
         playerIcon.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
 
-        // ── Quest banner text below circle ─────────────────────
-        scenarioLabel = MakeText(outerGO.transform, "ScenarioLabel",
-            "Scenario 1 / 4", 11, new Color(0.9f, 0.75f, 0.3f, 1f));
+        // ── Quest Card below circle ────────────────────────────
+        GameObject cardGO = new GameObject("QuestCard");
+        cardGO.transform.SetParent(outerGO.transform, false);
+        Image cardBg = cardGO.AddComponent<Image>();
+        cardBg.color = new Color(0.05f, 0.10f, 0.06f, 0.90f);
+        RectTransform cardRT = cardGO.GetComponent<RectTransform>();
+        cardRT.anchorMin = cardRT.anchorMax = new Vector2(0.5f, 1f);
+        cardRT.pivot     = new Vector2(0.5f, 1f);
+        cardRT.sizeDelta = new Vector2(circleDiameter + 15f, 75f);
+        cardRT.anchoredPosition = new Vector2(0f, -(circleDiameter + 6f));
+
+        // Thin gold top bar on the card
+        GameObject cardBar = new GameObject("GoldBar");
+        cardBar.transform.SetParent(cardGO.transform, false);
+        Image barImg = cardBar.AddComponent<Image>();
+        barImg.color = new Color(0.92f, 0.72f, 0.22f, 0.8f);
+        RectTransform barRT = cardBar.GetComponent<RectTransform>();
+        barRT.anchorMin = barRT.anchorMax = new Vector2(0.5f, 1f);
+        barRT.pivot     = new Vector2(0.5f, 1f);
+        barRT.sizeDelta = new Vector2(circleDiameter + 15f, 2f);
+        barRT.anchoredPosition = Vector2.zero;
+
+        // Scenario label ("SCENARIO 1 / 4")
+        scenarioLabel = MakeText(cardGO.transform, "ScenarioLabel",
+            "SCENARIO 1 / 4", 13, new Color(0.95f, 0.80f, 0.30f, 1f));
         RectTransform slRT = scenarioLabel.GetComponent<RectTransform>();
         slRT.anchorMin = slRT.anchorMax = new Vector2(0.5f, 1f);
         slRT.pivot     = new Vector2(0.5f, 1f);
-        slRT.sizeDelta = new Vector2(DisplayRadius * 2f + 20f, 20f);
-        slRT.anchoredPosition = new Vector2(0f, -(BorderThickness + DisplayRadius * 2f + 4f));
+        slRT.sizeDelta = new Vector2(circleDiameter + 5f, 22f);
+        slRT.anchoredPosition = new Vector2(0f, -4f);
 
-        questText = MakeText(outerGO.transform, "QuestBanner",
-            "Gather mushrooms & crystal", 12, new Color(1f, 0.95f, 0.6f, 1f));
+        // Quest instruction text
+        questText = MakeText(cardGO.transform, "QuestText",
+            "Gather 2 mushrooms & 1 crystal", 13, new Color(1f, 0.96f, 0.85f, 1f));
         RectTransform qtRT = questText.GetComponent<RectTransform>();
         qtRT.anchorMin = qtRT.anchorMax = new Vector2(0.5f, 1f);
         qtRT.pivot     = new Vector2(0.5f, 1f);
-        qtRT.sizeDelta = new Vector2(DisplayRadius * 2f + 20f, 28f);
-        qtRT.anchoredPosition = new Vector2(0f, -(BorderThickness + DisplayRadius * 2f + 24f));
+        qtRT.sizeDelta = new Vector2(circleDiameter + 5f, 44f);
+        qtRT.anchoredPosition = new Vector2(0f, -26f);
     }
 
-    // ── icon sync ──────────────────────────────────────────────
+    // ── icon synchronization ───────────────────────────────────
 
     void SyncIconList()
     {
@@ -165,112 +211,118 @@ public class ForestMinimap : MonoBehaviour
 
         var desired = ForestQuestManager.Instance.MinimapIcons;
 
-        // Remove icons for objects that have been destroyed.
+        // Clean up icons whose world targets were destroyed (e.g. collected items)
         for (int i = trackedIcons.Count - 1; i >= 0; i--)
         {
             if (trackedIcons[i].target == null)
             {
-                Destroy(trackedIcons[i].icon.gameObject);
+                if (trackedIcons[i].icon != null)
+                    Destroy(trackedIcons[i].icon.gameObject);
                 trackedIcons.RemoveAt(i);
             }
         }
 
-        // Add new icons that aren't tracked yet.
+        // Add any newly registered targets
         foreach (var (t, type) in desired)
         {
             if (t == null) continue;
-            bool alreadyTracked = false;
+            bool exists = false;
             foreach (var entry in trackedIcons)
-                if (entry.target == t) { alreadyTracked = true; break; }
+            {
+                if (entry.target == t) { exists = true; break; }
+            }
 
-            if (!alreadyTracked)
-                trackedIcons.Add((t, type, CreateIcon(type)));
+            if (!exists)
+            {
+                Image img = CreateIcon(type);
+                trackedIcons.Add((t, type, img));
+            }
         }
     }
 
     Image CreateIcon(int type)
     {
         Color color;
-        Sprite spr = circleSprite;  // default = circle dot
+        Sprite spr = circleSprite;
+        float size = IconSize;
 
         switch (type)
         {
             case (int)IngredientType.Mushroom:
-                color = new Color(1f, 0.55f, 0.05f, 1f); break;  // orange
+                color = new Color(1.0f, 0.45f, 0.12f, 1f); // Vibrant orange
+                break;
             case (int)IngredientType.Crystal:
-                color = new Color(0.1f, 0.9f, 1.0f, 1f);         // cyan
-                spr   = squareSprite; break;                       // diamond (rotated square)
+                color = new Color(0.12f, 0.90f, 1.0f, 1f); // Cyan diamond
+                spr   = diamondSprite;
+                break;
             case (int)IngredientType.Herb:
-                color = new Color(0.3f, 1.0f, 0.3f, 1f); break;  // bright green
-            case -1: // cauldron
-                color = new Color(1.0f, 0.80f, 0.1f, 1f);        // gold
-                spr   = squareSprite; break;
-            case 10: // runic monolith
-                color = new Color(0.4f, 1.0f, 0.5f, 1f); break;  // green glow
+                color = new Color(0.25f, 1.0f, 0.35f, 1f); // Emerald green
+                break;
+            case -1: // Cauldron
+                color = new Color(1.0f, 0.82f, 0.18f, 1f); // Radiant gold
+                spr   = diamondSprite;
+                size  = IconSize + 4f;
+                break;
+            case 10: // Runic monolith
+                color = new Color(0.35f, 1.0f, 0.70f, 1f); // Mint rune glow
+                break;
             default:
-                color = Color.white; break;
+                color = Color.white;
+                break;
         }
 
-        Image img = MakeImage(circleContainer, $"Icon_{type}", spr, color, IconSize, IconSize);
+        Image img = MakeImage(iconContainer, $"Icon_{type}", spr, color, size, size);
 
-        // Rotate Crystal and Cauldron icons 45° so the square looks like a diamond.
-        if (type == (int)IngredientType.Crystal || type == -1)
-            img.GetComponent<RectTransform>().localEulerAngles = new Vector3(0f, 0f, 45f);
+        // Put cauldron and player on top of ingredient dots
+        if (type == -1)
+            img.transform.SetAsLastSibling();
 
         return img;
     }
 
-    // ── update icons each frame ────────────────────────────────
+    // ── per-frame icon update ──────────────────────────────────
 
     void UpdateIcons()
     {
-        if (playerTransform == null)
-        {
-            // Try to find player again (may have spawned late).
-            GameObject p = GameObject.FindGameObjectWithTag("Player");
-            if (p != null) playerTransform = p.transform;
-            return;
-        }
+        if (playerTransform == null) return;
 
         Vector3 playerPos = playerTransform.position;
-        float   playerYaw = playerTransform.eulerAngles.y; // forward rotation
 
         foreach (var (target, type, icon) in trackedIcons)
         {
-            if (target == null) { icon.enabled = false; continue; }
+            if (target == null || icon == null) continue;
 
             Vector3 delta = target.position - playerPos;
-            // Project onto XZ plane (ignore height).
-            float worldX = delta.x;
-            float worldZ = delta.z;
 
-            // Rotate the delta by the negative of player yaw to keep map
-            // "player-forward = up" orientation.
-            float rad = -playerYaw * Mathf.Deg2Rad;
-            float rotX =  worldX * Mathf.Cos(rad) - worldZ * Mathf.Sin(rad);
-            float rotZ =  worldX * Mathf.Sin(rad) + worldZ * Mathf.Cos(rad);
+            // North-up radar projection
+            float px = (delta.x / MapWorldRadius) * DisplayRadius;
+            float py = (delta.z / MapWorldRadius) * DisplayRadius;
 
-            // Scale to display pixels.
-            float px = rotX / MapWorldRadius * DisplayRadius;
-            float py = rotZ / MapWorldRadius * DisplayRadius;
-
-            // Clamp to circle edge so icons don't go outside.
+            // Clamp inside circular radar boundary
             Vector2 uiPos = new Vector2(px, py);
-            if (uiPos.magnitude > DisplayRadius - IconSize * 0.5f)
-                uiPos = uiPos.normalized * (DisplayRadius - IconSize * 0.5f);
+            float maxR = DisplayRadius - IconSize * 0.5f;
+            if (uiPos.magnitude > maxR)
+                uiPos = uiPos.normalized * maxR;
 
             icon.rectTransform.anchoredPosition = uiPos;
             icon.enabled = true;
+        }
+
+        // Keep player arrow at the exact center and on top
+        if (playerIcon != null)
+        {
+            playerIcon.rectTransform.anchoredPosition = Vector2.zero;
+            playerIcon.transform.SetAsLastSibling();
         }
     }
 
     void UpdatePlayerArrow()
     {
-        // The player icon sits at the center; rotate it to show heading.
-        if (playerTransform != null && playerIcon != null)
-        {
-            playerIcon.rectTransform.anchoredPosition = Vector2.zero;
-        }
+        if (playerTransform == null || playerIcon == null) return;
+
+        // Rotate arrow to match player's heading
+        float yaw = playerTransform.eulerAngles.y;
+        playerIcon.rectTransform.localEulerAngles = new Vector3(0f, 0f, -yaw);
     }
 
     void UpdateQuestText()
@@ -281,10 +333,10 @@ public class ForestMinimap : MonoBehaviour
             questText.text = ForestQuestManager.Instance.QuestBannerText;
 
         if (scenarioLabel != null)
-            scenarioLabel.text = $"Scenario {ForestQuestManager.Instance.CurrentScenario} / 4";
+            scenarioLabel.text = $"SCENARIO {ForestQuestManager.Instance.CurrentScenario} / 4";
     }
 
-    // ── UI helpers ─────────────────────────────────────────────
+    // ── UI element creators ────────────────────────────────────
 
     static Image MakeImage(Transform parent, string name, Sprite sprite,
                            Color color, float w, float h)
@@ -295,7 +347,7 @@ public class ForestMinimap : MonoBehaviour
         img.sprite  = sprite;
         img.color   = color;
         img.type    = Image.Type.Simple;
-        img.preserveAspect = false;
+        img.raycastTarget = false;
         RectTransform rt = img.GetComponent<RectTransform>();
         rt.sizeDelta         = new Vector2(w, h);
         rt.anchoredPosition  = Vector2.zero;
@@ -314,13 +366,20 @@ public class ForestMinimap : MonoBehaviour
         txt.color     = color;
         txt.alignment = TextAnchor.MiddleCenter;
         txt.fontStyle = FontStyle.Bold;
-        go.AddComponent<RectTransform>();
+        txt.horizontalOverflow = HorizontalWrapMode.Wrap;
+        txt.verticalOverflow   = VerticalWrapMode.Truncate;
+        txt.raycastTarget      = false;
+
+        // Subtle drop shadow for crisp readability
+        Shadow shadow = go.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
+        shadow.effectDistance = new Vector2(1.5f, -1.5f);
+
         return txt;
     }
 
-    // ── sprite generators ──────────────────────────────────────
+    // ── procedural sprites ─────────────────────────────────────
 
-    // Creates a smooth circle sprite from a Texture2D.
     static Sprite MakeCircleSprite(int size)
     {
         Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
@@ -328,6 +387,7 @@ public class ForestMinimap : MonoBehaviour
         float r = size / 2f;
         Color[] pixels = new Color[size * size];
         for (int y = 0; y < size; y++)
+        {
             for (int x = 0; x < size; x++)
             {
                 float dx = x - r + 0.5f;
@@ -336,18 +396,59 @@ public class ForestMinimap : MonoBehaviour
                 float alpha = Mathf.Clamp01((r - dist) / 1.0f);
                 pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
             }
+        }
         tex.SetPixels(pixels);
         tex.Apply();
         return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
     }
 
-    // Creates a solid square sprite.
-    static Sprite MakeSquareSprite(int size)
+    static Sprite MakeDiamondSprite(int size)
     {
         Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        float mid = size / 2f;
         Color[] pixels = new Color[size * size];
-        for (int i = 0; i < pixels.Length; i++)
-            pixels[i] = Color.white;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float manhattan = Mathf.Abs(x - mid + 0.5f) + Mathf.Abs(y - mid + 0.5f);
+                float alpha = Mathf.Clamp01((mid - manhattan) / 1.0f);
+                pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
+            }
+        }
+        tex.SetPixels(pixels);
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+    }
+
+    static Sprite MakeArrowSprite(int size)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        Color[] pixels = new Color[size * size];
+        for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.clear;
+
+        float mid = size * 0.5f;
+        for (int y = 0; y < size; y++)
+        {
+            if (y < 4 || y > size - 4) continue;
+            float progress = (float)(y - 4) / (size - 8); // 0 at bottom, 1 at tip
+            float halfWidth = (1f - progress) * (mid - 3f);
+            float minX = mid - halfWidth;
+            float maxX = mid + halfWidth;
+
+            for (int x = 0; x < size; x++)
+            {
+                // Notch the bottom center for arrowhead shape
+                if (y < 12 && Mathf.Abs(x - mid) < (12 - y) * 0.65f) continue;
+
+                if (x >= minX && x <= maxX)
+                {
+                    pixels[y * size + x] = Color.white;
+                }
+            }
+        }
         tex.SetPixels(pixels);
         tex.Apply();
         return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));

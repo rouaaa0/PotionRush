@@ -20,49 +20,32 @@ using UnityEngine;
 //  Scenario 4  "Master Brew"
 //      All ingredient types respawn in new spots.
 //      Collect 2 Mushrooms + 2 Crystals + 2 Herbs then final brew.
-//
-//  This script creates all scenario objects in code (no extra prefabs).
-//  It hooks into the existing StageManager singleton.
 // ============================================================
 public class ForestQuestManager : MonoBehaviour
 {
     // ── public state ───────────────────────────────────────────
     public static ForestQuestManager Instance { get; private set; }
 
-    // Current 1-based scenario number (1–4). Read by ForestMinimap.
     public int CurrentScenario { get; private set; } = 1;
-
-    // Human-readable "next task" text shown on the minimap banner.
     public string QuestBannerText { get; private set; } = "";
 
-    // Live list of active ingredient transforms the minimap can track.
-    // Key = Transform, Value = IngredientType (cast to int) or -1 for cauldron.
+    // Live list of active ingredient transforms tracked by ForestMinimap.
+    // Key = Transform, Value = icon type:
+    // (int)IngredientType (0=Mush, 1=Cryst, 2=Herb), -1=Cauldron, 10=Monolith
     public List<(Transform t, int iconType)> MinimapIcons { get; private set; }
         = new List<(Transform, int)>();
 
-    // ── scene references (assigned by ForestStageBuilder) ──────
-    [Header("Set by builder – do not edit in Inspector")]
-    public Transform cauldronTransform;    // shared Cauldron in scene
+    [Header("Set by builder")]
+    public Transform cauldronTransform;
 
-    // ── internal runtime ───────────────────────────────────────
-    // Containers for each scenario's spawned objects.
-    // ForestStageBuilder fills these at edit time; we enable/disable at runtime.
-    GameObject scenario1Root;   // Mushrooms + Crystal (Scenario 1 layout)
-    GameObject scenario2Root;   // Hedges + Herbs + Crystal (Scenario 2 layout)
-    GameObject scenario3Root;   // 3 runic pillars
-    GameObject scenario4Root;   // Final spread of ingredients
+    GameObject scenario1Root;
+    GameObject scenario2Root;
+    GameObject scenario3Root;
+    GameObject scenario4Root;
 
-    // Track monolith activation count for Scenario 3.
     int monolithsActivated = 0;
     const int MonolithsRequired = 3;
-
-    // Materials for scenario-specific objects, created at runtime.
-    Material hedgeMat;
-    Material herbMat;
-    Material monolithDimMat;
-    Material monolithBrightMat;
-
-    // ── Unity lifecycle ────────────────────────────────────────
+    bool isTransitioning = false;
 
     void Awake()
     {
@@ -72,40 +55,108 @@ public class ForestQuestManager : MonoBehaviour
 
     void Start()
     {
-        // Wire up brew-complete callback from StageManager.
-        if (StageManager.Instance != null)
-            StageManager.Instance.BrewProgressed += OnBrewProgressed;
+        // Intercept Cauldron completion so Scenario 1-3 don't trigger the end game screen!
+        Cauldron.CustomBrewCompleted = OnCustomBrewCompleted;
+        Cauldron.CanBrewCheck = CanCauldronBrew;
 
-        // Find the scenario roots that the builder placed in the scene.
-        // They are named children of this GameObject.
         scenario1Root = FindChild("Scenario1_Ingredients");
         scenario2Root = FindChild("Scenario2_Hedge");
         scenario3Root = FindChild("Scenario3_Monoliths");
         scenario4Root = FindChild("Scenario4_FinalIngredients");
 
-        // Start with Scenario 1 active.
         ActivateScenario(1);
     }
 
     void OnDestroy()
     {
-        if (StageManager.Instance != null)
-            StageManager.Instance.BrewProgressed -= OnBrewProgressed;
+        Cauldron.CustomBrewCompleted = null;
+        Cauldron.CanBrewCheck = null;
     }
 
-    // ── scenario progression ───────────────────────────────────
+    bool CanCauldronBrew()
+    {
+        if (isTransitioning) return false;
+
+        // In Scenario 3, player must awaken all 3 monoliths first!
+        if (CurrentScenario == 3)
+            return monolithsActivated >= MonolithsRequired;
+
+        return true;
+    }
+
+    void OnCustomBrewCompleted(Cauldron cauldron)
+    {
+        if (isTransitioning) return;
+
+        if (CurrentScenario < 4)
+        {
+            // Complete current scenario with celebration, then progress to next!
+            StartCoroutine(ScenarioTransitionRoutine(cauldron));
+        }
+        else
+        {
+            // Scenario 4: The final master brew! Trigger true stage victory!
+            if (StageManager.Instance != null)
+            {
+                StageManager.Instance.CompleteBrew();
+            }
+        }
+    }
+
+    IEnumerator ScenarioTransitionRoutine(Cauldron cauldron)
+    {
+        isTransitioning = true;
+        int completedScenario = CurrentScenario;
+        int next = CurrentScenario + 1;
+
+        Debug.Log($"[ForestQuestManager] Scenario {completedScenario} completed! Preparing Scenario {next}...");
+
+        // 1. Mini-celebration burst at cauldron
+        if (cauldron != null)
+            cauldron.CelebrateMini();
+
+        // 2. Award bonus points
+        if (StageManager.Instance != null)
+        {
+            var scoreProp = typeof(StageManager).GetProperty("Score");
+            if (scoreProp != null && scoreProp.CanWrite)
+                scoreProp.SetValue(StageManager.Instance, StageManager.Instance.Score + 100);
+        }
+
+        QuestBannerText = $"Scenario {completedScenario} Complete! ✨";
+
+        // 3. Wait for celebration particles
+        yield return new WaitForSeconds(2.2f);
+
+        // 4. Reset cauldron and brew state
+        if (cauldron != null)
+            cauldron.ResetBrew();
+
+        if (StageManager.Instance != null)
+        {
+            StageManager.Instance.ReportBrewProgress(0f);
+            StageManager.Instance.SetBrewing(false);
+        }
+
+        // 5. Restore player movement
+        PlayerController player = FindFirstObjectByType<PlayerController>();
+        if (player != null) player.CanMove = true;
+
+        // 6. Launch next scenario
+        isTransitioning = false;
+        ActivateScenario(next);
+    }
 
     void ActivateScenario(int n)
     {
         CurrentScenario = n;
 
-        // Hide everything first.
+        // Hide all scenario objects first
         SetActive(scenario1Root, false);
         SetActive(scenario2Root, false);
         SetActive(scenario3Root, false);
         SetActive(scenario4Root, false);
 
-        // Reset minimap icons; cauldron is always visible.
         MinimapIcons.Clear();
         if (cauldronTransform != null)
             MinimapIcons.Add((cauldronTransform, -1)); // -1 = cauldron icon
@@ -115,7 +166,6 @@ public class ForestQuestManager : MonoBehaviour
             case 1:
                 SetActive(scenario1Root, true);
                 RegisterIngredientIcons(scenario1Root);
-                // Reset StageManager recipe for 2 Mushroom + 1 Crystal.
                 SetRecipe(new[] {
                     (IngredientType.Mushroom, 2),
                     (IngredientType.Crystal,  1)
@@ -126,7 +176,6 @@ public class ForestQuestManager : MonoBehaviour
             case 2:
                 SetActive(scenario2Root, true);
                 RegisterIngredientIcons(scenario2Root);
-                // Recipe: 3 Herb + 1 Crystal.
                 SetRecipe(new[] {
                     (IngredientType.Herb,    3),
                     (IngredientType.Crystal, 1)
@@ -137,9 +186,8 @@ public class ForestQuestManager : MonoBehaviour
             case 3:
                 SetActive(scenario3Root, true);
                 monolithsActivated = 0;
-                // No collect recipe – monolith proximity is the trigger.
+                // Empty recipe so RecipeComplete evaluates to true, but CanBrewCheck requires 3 monoliths
                 SetRecipe(System.Array.Empty<(IngredientType, int)>());
-                // Register monolith transforms as special icons (use type 10 = monolith).
                 RegisterMonolithIcons(scenario3Root);
                 QuestBannerText = "Activate 3 rune monoliths";
                 break;
@@ -147,7 +195,6 @@ public class ForestQuestManager : MonoBehaviour
             case 4:
                 SetActive(scenario4Root, true);
                 RegisterIngredientIcons(scenario4Root);
-                // Final recipe: 2 Mushroom + 2 Crystal + 2 Herb.
                 SetRecipe(new[] {
                     (IngredientType.Mushroom, 2),
                     (IngredientType.Crystal,  2),
@@ -157,10 +204,9 @@ public class ForestQuestManager : MonoBehaviour
                 break;
         }
 
-        Debug.Log($"[ForestQuestManager] Scenario {n} started: {QuestBannerText}");
+        Debug.Log($"[ForestQuestManager] Scenario {n} active: {QuestBannerText}");
     }
 
-    // Called by ForestRunicMonolith when a pillar is activated.
     public void MonolithActivated(int index)
     {
         if (CurrentScenario != 3) return;
@@ -169,65 +215,18 @@ public class ForestQuestManager : MonoBehaviour
         int remaining = MonolithsRequired - monolithsActivated;
         QuestBannerText = remaining > 0
             ? $"Activate {remaining} more monolith{(remaining > 1 ? "s" : "")}"
-            : "Now brew the potion!";
+            : "All active! Brew at cauldron!";
 
         Debug.Log($"[ForestQuestManager] Monolith {index} activated ({monolithsActivated}/{MonolithsRequired})");
-
-        if (monolithsActivated >= MonolithsRequired)
-        {
-            // All monoliths lit – let the player brew the potion.
-            // We set a fake "complete" recipe (0 items required) so the
-            // existing Cauldron / StageManager brew logic triggers victory.
-            // (Recipe was already set to empty in ActivateScenario(3).)
-            Debug.Log("[ForestQuestManager] All monoliths activated – approach the cauldron to brew!");
-        }
     }
 
-    // Called when the brew slider hits 1.0 (BrewProgressed event).
-    float lastBrewProgress = 0f;
-    void OnBrewProgressed(float progress)
-    {
-        // Detect a fresh brew completion (progress goes from non-1 to 1).
-        if (progress >= 1f && lastBrewProgress < 1f)
-            OnBrewComplete();
-        lastBrewProgress = progress;
-    }
-
-    void OnBrewComplete()
-    {
-        if (CurrentScenario < 4)
-        {
-            int next = CurrentScenario + 1;
-            Debug.Log($"[ForestQuestManager] Brew complete! Advancing to Scenario {next}");
-
-            // Brief pause before switching so the win particle/sound plays.
-            StartCoroutine(DelayedScenarioSwitch(next, 2.5f));
-        }
-        // Scenario 4 brew is handled by the existing StageManager.CompleteBrew() → StageWon.
-    }
-
-    IEnumerator DelayedScenarioSwitch(int next, float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        ActivateScenario(next);
-        // Reset the brew gauge for the next scenario.
-        if (StageManager.Instance != null)
-            StageManager.Instance.ReportBrewProgress(0f);
-        // Reset brew state via reflection (simple approach).
-        lastBrewProgress = 0f;
-    }
-
-    // ── helpers ────────────────────────────────────────────────
-
-    // Replace the StageManager recipe at runtime without touching the asset file.
     void SetRecipe((IngredientType type, int amount)[] entries)
     {
         if (StageManager.Instance == null) return;
 
         StageManager.Instance.config.recipe.Clear();
-        // Reset the internal collected dictionary too using the public API.
-        // We do this by creating a fresh config copy is tricky, so instead we
-        // use reflection to clear the private 'collected' dictionary.
+
+        // Clear the internal collected dictionary using reflection
         var collectedField = typeof(StageManager).GetField("collected",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         if (collectedField != null)
@@ -239,9 +238,12 @@ public class ForestQuestManager : MonoBehaviour
 
         foreach (var (type, amount) in entries)
             StageManager.Instance.config.recipe.Add(new RecipeEntry { type = type, amount = amount });
+
+        // Refresh the HUD Objectives card immediately!
+        HUD hud = FindFirstObjectByType<HUD>();
+        if (hud != null) hud.RebuildObjectives();
     }
 
-    // Walk a scenario root and register all Ingredient children on the minimap.
     void RegisterIngredientIcons(GameObject root)
     {
         if (root == null) return;
@@ -249,7 +251,6 @@ public class ForestQuestManager : MonoBehaviour
             MinimapIcons.Add((ing.transform, (int)ing.type));
     }
 
-    // Walk the monolith root and register each pillar as icon type 10.
     void RegisterMonolithIcons(GameObject root)
     {
         if (root == null) return;
@@ -266,15 +267,5 @@ public class ForestQuestManager : MonoBehaviour
     {
         Transform t = transform.Find(name);
         return t != null ? t.gameObject : null;
-    }
-
-    // ── public setters (called by ForestStageBuilder at edit time) ──
-
-    public void SetScenarioRoots(GameObject s1, GameObject s2, GameObject s3, GameObject s4)
-    {
-        scenario1Root = s1;
-        scenario2Root = s2;
-        scenario3Root = s3;
-        scenario4Root = s4;
     }
 }

@@ -133,6 +133,18 @@ public class HUD : MonoBehaviour
         objectivesCard.sizeDelta = new Vector2(objectivesCard.sizeDelta.x, -y + 22f);
     }
 
+    public void RebuildObjectives()
+    {
+        foreach (ObjectiveRow row in rows)
+        {
+            if (row.dot != null) Destroy(row.dot.gameObject);
+            if (row.label != null) Destroy(row.label.gameObject);
+            if (row.count != null) Destroy(row.count.gameObject);
+        }
+        rows.Clear();
+        BuildObjectives();
+    }
+
     Text NewText(string name, TextAnchor align, int size)
     {
         GameObject go = new GameObject(name, typeof(RectTransform), typeof(Text));

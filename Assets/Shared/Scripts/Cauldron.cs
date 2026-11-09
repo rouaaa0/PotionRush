@@ -15,6 +15,9 @@ public class Cauldron : MonoBehaviour
     bool brewing;
     int shakes;
 
+    public static System.Action<Cauldron> CustomBrewCompleted;
+    public static System.Func<bool> CanBrewCheck;
+
     Transform liquid;
     Material liquidMaterial;
     Light glow;
@@ -53,6 +56,8 @@ public class Cauldron : MonoBehaviour
     void OnDestroy()
     {
         if (GameInput.Instance != null) GameInput.Instance.Shaken -= OnShaken;
+        CustomBrewCompleted = null;
+        CanBrewCheck = null;
     }
 
     void Update()
@@ -63,6 +68,8 @@ public class Cauldron : MonoBehaviour
         if (!brewing && player != null && stage.State == StageState.Playing && stage.RecipeComplete &&
             Vector3.Distance(player.transform.position, transform.position) <= activateRadius)
         {
+            if (CanBrewCheck != null && !CanBrewCheck()) return;
+
             brewing = true;
             shakes = 0;
             player.CanMove = false;
@@ -244,7 +251,37 @@ public class Cauldron : MonoBehaviour
         {
             brewing = false;
             stage.SetBrewing(false);
-            stage.CompleteBrew();
+            if (CustomBrewCompleted != null)
+            {
+                CustomBrewCompleted.Invoke(this);
+            }
+            else
+            {
+                stage.CompleteBrew();
+            }
         }
+    }
+
+    public void ResetBrew()
+    {
+        brewing = false;
+        shakes = 0;
+        progress = 0f;
+        pulse = 0f;
+        celebrated = false;
+        if (bottle != null)
+        {
+            Destroy(bottle.gameObject);
+            bottle = null;
+        }
+        if (player != null)
+        {
+            player.CanMove = true;
+        }
+    }
+
+    public void CelebrateMini()
+    {
+        Celebrate();
     }
 }

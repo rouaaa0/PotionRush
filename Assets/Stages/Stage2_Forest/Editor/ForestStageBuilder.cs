@@ -82,6 +82,7 @@ public static class ForestStageBuilder
         {
             player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab);
             player.name = "Player";
+            player.tag = "Player";
             player.transform.position = spawnPos;
             player.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
 
