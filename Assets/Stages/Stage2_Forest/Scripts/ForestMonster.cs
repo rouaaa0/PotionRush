@@ -2,23 +2,22 @@ using UnityEngine;
 
 // ============================================================
 //  ForestMonster  –  Stage 2 (Scenarios 2 & 3)
+//  A small, slow, floating spectral ghost / wisp.
 //
-//  A menacing forest stalker with two specialized guard behaviors:
+//  Moves slowly:
+//    - Patrol speed: 1.35 m/s (slow, gentle floating drift)
+//    - Chase speed:  2.15 m/s (slow eerie pursuit, wizard can easily outrun)
 //
 //  1. GuardCauldron (Scenario 2):
-//     Patrols around the Cauldron (where the wizard must empty herbs).
-//     If the player approaches within detection range, the monster
-//     chases aggressively! If the wizard flees into the hedges,
-//     the monster returns to guard the cauldron.
+//     Slowly floats around the cauldron shrine.
+//     If the wizard approaches, it slowly pursues!
 //
 //  2. GuardObjectives (Scenario 3):
-//     Patrols between the 3 rune monoliths / relics.
-//     Pauses at each to inspect it, then marches to the next.
-//     If the player gets near, it chases! The player must collect
-//     all monoliths without touching the monster.
+//     Slowly floats between the 3 rune monoliths, haunting each one.
+//     The wizard must activate all 3 monoliths without touching the ghost!
 //
-//  Contact (<= 1.2m) triggers:
-//     StageManager.FailStage("Attrapé par le Monstre !")
+//  Contact (<= 0.9m) triggers:
+//     StageManager.FailStage("Attrapé par le Fantôme !")
 // ============================================================
 public enum MonsterMode
 {
@@ -32,15 +31,15 @@ public class ForestMonster : MonoBehaviour
     [Header("Behavior Mode")]
     public MonsterMode currentMode = MonsterMode.GuardCauldron;
 
-    [Header("Speeds")]
-    [SerializeField] float patrolSpeed = 2.3f;
-    [SerializeField] float chaseSpeed = 3.65f;
-    [SerializeField] float turnSpeed = 360f;
-    [SerializeField] float catchRadius = 1.2f;
+    [Header("Speeds (Slow Floating Ghost)")]
+    [SerializeField] float patrolSpeed = 1.35f; // Slow floating patrol
+    [SerializeField] float chaseSpeed  = 2.15f; // Slow eerie pursuit
+    [SerializeField] float turnSpeed   = 180f;  // Gentle floating turn
+    [SerializeField] float catchRadius = 0.90f; // Small ghost collision radius
 
     [Header("Detection")]
-    [SerializeField] float detectRange = 6.5f;
-    [SerializeField] float loseRange = 11.5f;
+    [SerializeField] float detectRange = 6.0f;
+    [SerializeField] float loseRange   = 10.5f;
 
     [Header("Visuals")]
     [SerializeField] Light monsterLight;
@@ -51,7 +50,7 @@ public class ForestMonster : MonoBehaviour
 
     PlayerController player;
     bool caught = false;
-    float runCycle = 0f;
+    float floatTimer = 0f;
 
     // Cauldron guard patrol waypoints (around cauldron at (0, 0, -2.5))
     Vector3 cauldronPos = new Vector3(0f, 0f, -2.5f);
@@ -85,7 +84,7 @@ public class ForestMonster : MonoBehaviour
     void OnEnable()
     {
         caught = false;
-        runCycle = 0f;
+        floatTimer = 0f;
         waitTimer = 0f;
         isWaitingAtObjective = false;
         currentCauldronIndex = 0;
@@ -320,28 +319,30 @@ public class ForestMonster : MonoBehaviour
 
     void AnimateVisuals(bool isChasing)
     {
-        float animSpeed = isChasing ? 12f : 6f;
-        runCycle += Time.deltaTime * animSpeed;
+        floatTimer += Time.deltaTime;
 
+        // Smooth ghostly hover bobbing up and down (slow floating motion)
         if (modelRoot != null)
         {
-            float bob = Mathf.Abs(Mathf.Sin(runCycle)) * (isChasing ? 0.14f : 0.07f);
-            float tilt = Mathf.Sin(runCycle * 0.5f) * (isChasing ? 4f : 2f);
-            modelRoot.localPosition = new Vector3(0f, bob, 0f);
-            modelRoot.localEulerAngles = new Vector3(tilt, 0f, -tilt * 0.5f);
+            float hoverY = Mathf.Sin(floatTimer * 3.0f) * 0.12f;
+            float swayZ  = Mathf.Sin(floatTimer * 2.2f) * 4.0f;
+            modelRoot.localPosition = new Vector3(0f, hoverY, 0f);
+            modelRoot.localEulerAngles = new Vector3(0f, 0f, swayZ);
         }
 
+        // Floating little ghost hands
         if (leftArm != null && rightArm != null)
         {
-            float armSwing = Mathf.Sin(runCycle) * (isChasing ? 32f : 16f);
-            leftArm.localEulerAngles = new Vector3(armSwing, 0f, 15f);
-            rightArm.localEulerAngles = new Vector3(-armSwing, 0f, -15f);
+            float handFloat = Mathf.Sin(floatTimer * 3.6f) * 12f;
+            leftArm.localEulerAngles  = new Vector3(handFloat, 0f, 18f);
+            rightArm.localEulerAngles = new Vector3(-handFloat, 0f, -18f);
         }
 
+        // Soft spectral cyan/blue light pulse
         if (monsterLight != null)
         {
-            float baseIntensity = isChasing ? 4.5f : 2.5f;
-            float pulse = Mathf.Sin(Time.time * (isChasing ? 10f : 4f)) * (isChasing ? 1.2f : 0.5f);
+            float baseIntensity = isChasing ? 3.0f : 2.2f;
+            float pulse = Mathf.Sin(Time.time * 4f) * 0.45f;
             monsterLight.intensity = baseIntensity + pulse;
         }
     }
@@ -351,13 +352,13 @@ public class ForestMonster : MonoBehaviour
         if (caught) return;
         caught = true;
 
-        Debug.Log("[ForestMonster] Player caught! Defeat!");
+        Debug.Log("[ForestMonster] Player caught by ghost! Defeat!");
 
         if (player != null)
             player.CanMove = false;
 
         if (StageManager.Instance != null)
-            StageManager.Instance.FailStage("Attrapé par le Monstre !");
+            StageManager.Instance.FailStage("Attrapé par le Fantôme !");
     }
 
     public void Setup(Light light, Transform model, Transform head, Transform lArm, Transform rArm)

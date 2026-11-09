@@ -151,13 +151,13 @@ public class ForestQuestManager : MonoBehaviour
 
             if (next == 2)
             {
-                title = "SCÉNARIO 2 : LE GARDIEN DU CHAUDRON";
-                subtitle = "Le monstre garde le chaudron ! Récoltez les herbes et semez-le !";
+                title = "SCÉNARIO 2 : LE FANTÔME DU CHAUDRON";
+                subtitle = "Le petit fantôme hante le chaudron ! Récoltez les herbes et semez-le lentement !";
             }
             else if (next == 3)
             {
-                title = "SCÉNARIO 3 : LES RELIQUES GARDÉES";
-                subtitle = "Le monstre garde les 3 monolithes ! Activez-les sans vous faire toucher !";
+                title = "SCÉNARIO 3 : LES MONOLITHES HANTÉS";
+                subtitle = "Le fantôme hante les 3 monolithes ! Activez-les sans vous faire toucher !";
             }
             else if (next == 4)
             {
@@ -227,7 +227,7 @@ public class ForestQuestManager : MonoBehaviour
                     (IngredientType.Herb,    3),
                     (IngredientType.Crystal, 1)
                 });
-                QuestBannerText = "Le monstre garde le chaudron ! (3 herbes & 1 cristal)";
+                QuestBannerText = "Évitez le fantôme du chaudron ! (3 herbes & 1 cristal)";
                 break;
 
             case 3:
@@ -248,7 +248,7 @@ public class ForestQuestManager : MonoBehaviour
                     MinimapIcons.Add((monster.transform, 99));
                 }
 
-                QuestBannerText = "Activez 3 monolithes sans toucher le monstre !";
+                QuestBannerText = "Activez 3 monolithes sans toucher le fantôme !";
                 break;
 
             case 4:

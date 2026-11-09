@@ -284,66 +284,64 @@ public static class ForestStageBuilder
         }
     }
 
-    // Scenario 2 & 3 – forest stalker monster (guards cauldron in Scen 2, guards monoliths in Scen 3).
+    // Scenario 2 & 3 – small spectral ghost (slowly floats & stalks the wizard).
     static void BuildMonster(GameObject parent, ForestQuestManager questManager)
     {
-        Material bodyMat = GetLitMaterial("MonsterBark",
-            new Color(0.12f, 0.08f, 0.08f), 0.1f, 0.1f, 0.2f, new Color(0.35f, 0.05f, 0.05f));
-        Material eyeMat = GetLitMaterial("MonsterEyes",
-            new Color(1.0f, 0.05f, 0.05f), 0.5f, 0f, 4.0f, new Color(1.0f, 0.1f, 0.1f));
+        Material ghostMat = GetLitMaterial("GhostSheet",
+            new Color(0.85f, 0.94f, 1.0f, 0.9f), 0.75f, 0.05f, 0.8f, new Color(0.25f, 0.60f, 1.0f));
+        Material eyeMat = GetLitMaterial("GhostEyes",
+            new Color(0.05f, 0.95f, 1.0f), 0.5f, 0f, 3.5f, new Color(0.1f, 0.90f, 1.0f));
 
         GameObject monsterRoot = new GameObject("ForestMonster");
         monsterRoot.transform.SetParent(parent.transform, false);
-        // Start near the ancient cauldron shrine
-        monsterRoot.transform.position = new Vector3(-3.2f, 0f, -2.5f);
+        // Start floating near the cauldron shrine
+        monsterRoot.transform.position = new Vector3(-3.0f, 0f, -2.5f);
 
         // Visual model container
         GameObject model = new GameObject("Model");
         model.transform.SetParent(monsterRoot.transform, false);
 
-        // Torso (hunched dark brier beast)
-        Part(model, PrimitiveType.Cube, "Torso",
-            new Vector3(0f, 1.25f, 0f), new Vector3(1.1f, 1.3f, 0.85f), new Vector3(8f, 0f, 0f), bodyMat, false);
+        // Cute/Spooky Small Ghost Shroud (total height ~0.95m, hovering at y = 0.65m)
+        // Head dome
+        GameObject head = Part(model, PrimitiveType.Sphere, "Head",
+            new Vector3(0f, 0.88f, 0f), new Vector3(0.55f, 0.52f, 0.52f), Vector3.zero, ghostMat, false);
 
-        // Head
-        GameObject head = Part(model, PrimitiveType.Cube, "Head",
-            new Vector3(0f, 2.1f, 0.2f), new Vector3(0.75f, 0.65f, 0.75f), new Vector3(12f, 0f, 0f), bodyMat, false);
-
-        // Menacing red glowing eyes
+        // Glowing soul cyan eyes
         Part(head, PrimitiveType.Sphere, "Eye_L",
-            new Vector3(-0.2f, 0.08f, 0.38f), new Vector3(0.18f, 0.18f, 0.18f), Vector3.zero, eyeMat, false);
+            new Vector3(-0.13f, 0.06f, 0.22f), new Vector3(0.12f, 0.12f, 0.12f), Vector3.zero, eyeMat, false);
         Part(head, PrimitiveType.Sphere, "Eye_R",
-            new Vector3(0.2f, 0.08f, 0.38f), new Vector3(0.18f, 0.18f, 0.18f), Vector3.zero, eyeMat, false);
+            new Vector3( 0.13f, 0.06f, 0.22f), new Vector3(0.12f, 0.12f, 0.12f), Vector3.zero, eyeMat, false);
 
-        // Spikes on head
-        Part(head, PrimitiveType.Cylinder, "Horn_L",
-            new Vector3(-0.35f, 0.42f, -0.1f), new Vector3(0.1f, 0.35f, 0.1f), new Vector3(-25f, -20f, 0f), bodyMat, false);
-        Part(head, PrimitiveType.Cylinder, "Horn_R",
-            new Vector3(0.35f, 0.42f, -0.1f), new Vector3(0.1f, 0.35f, 0.1f), new Vector3(-25f, 20f, 0f), bodyMat, false);
+        // Ghost body / shroud (tapering downwards)
+        Part(model, PrimitiveType.Cylinder, "Body",
+            new Vector3(0f, 0.55f, 0f), new Vector3(0.44f, 0.32f, 0.44f), Vector3.zero, ghostMat, false);
 
-        // Left Arm with pivot for running swing animation
-        GameObject leftArmPivot = new GameObject("LeftArm");
+        // Ghost tail / skirt
+        Part(model, PrimitiveType.Sphere, "Tail",
+            new Vector3(0f, 0.28f, -0.06f), new Vector3(0.36f, 0.38f, 0.42f), new Vector3(18f, 0f, 0f), ghostMat, false);
+
+        // Floating little ghost hands
+        GameObject leftArmPivot = new GameObject("LeftHand");
         leftArmPivot.transform.SetParent(model.transform, false);
-        leftArmPivot.transform.localPosition = new Vector3(-0.75f, 1.6f, 0f);
-        Part(leftArmPivot, PrimitiveType.Cylinder, "L_ArmMesh",
-            new Vector3(0f, -0.55f, 0.1f), new Vector3(0.22f, 0.55f, 0.22f), new Vector3(15f, 0f, -10f), bodyMat, false);
+        leftArmPivot.transform.localPosition = new Vector3(-0.35f, 0.62f, 0.05f);
+        Part(leftArmPivot, PrimitiveType.Sphere, "L_HandMesh",
+            new Vector3(0f, 0f, 0.08f), new Vector3(0.14f, 0.22f, 0.14f), new Vector3(20f, 0f, -15f), ghostMat, false);
 
-        // Right Arm with pivot
-        GameObject rightArmPivot = new GameObject("RightArm");
+        GameObject rightArmPivot = new GameObject("RightHand");
         rightArmPivot.transform.SetParent(model.transform, false);
-        rightArmPivot.transform.localPosition = new Vector3(0.75f, 1.6f, 0f);
-        Part(rightArmPivot, PrimitiveType.Cylinder, "R_ArmMesh",
-            new Vector3(0f, -0.55f, 0.1f), new Vector3(0.22f, 0.55f, 0.22f), new Vector3(15f, 0f, 10f), bodyMat, false);
+        rightArmPivot.transform.localPosition = new Vector3(0.35f, 0.62f, 0.05f);
+        Part(rightArmPivot, PrimitiveType.Sphere, "R_HandMesh",
+            new Vector3(0f, 0f, 0.08f), new Vector3(0.14f, 0.22f, 0.14f), new Vector3(20f, 0f, 15f), ghostMat, false);
 
-        // Menacing red aura point light
-        GameObject lightGO = new GameObject("MonsterLight");
+        // Soft spectral cyan aura point light
+        GameObject lightGO = new GameObject("GhostLight");
         lightGO.transform.SetParent(monsterRoot.transform, false);
-        lightGO.transform.localPosition = new Vector3(0f, 1.4f, 0.3f);
+        lightGO.transform.localPosition = new Vector3(0f, 0.75f, 0.1f);
         Light mLight = lightGO.AddComponent<Light>();
         mLight.type      = LightType.Point;
-        mLight.color     = new Color(1.0f, 0.12f, 0.08f);
-        mLight.range     = 6.5f;
-        mLight.intensity = 3.0f;
+        mLight.color     = new Color(0.30f, 0.75f, 1.0f);
+        mLight.range     = 4.5f;
+        mLight.intensity = 2.2f;
 
         // Controller component
         ForestMonster monsterComp = monsterRoot.AddComponent<ForestMonster>();
