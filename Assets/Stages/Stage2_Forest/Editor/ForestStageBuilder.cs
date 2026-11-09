@@ -139,7 +139,9 @@ public static class ForestStageBuilder
 
         BuildHedgeLabyrinth(s2);                  // creates fence cubes inside s2
         BuildHerbIngredients(s2, crystalPrefab); // creates Herb objects + 1 Crystal
-        BuildMonster(s2);                         // adds the monster pursuing the player in Scenario 2
+
+        // --- Shared ForestMonster: guards Cauldron in Scenario 2 & Monoliths in Scenario 3 ---
+        BuildMonster(questManagerObj, questManager);
 
         // --- Scenario 3 root: 3 runic monoliths ---------------------------------------
         GameObject s3 = new GameObject("Scenario3_Monoliths");
@@ -282,8 +284,8 @@ public static class ForestStageBuilder
         }
     }
 
-    // Scenario 2 – forest stalker monster pursuing the player in the labyrinth.
-    static void BuildMonster(GameObject parent)
+    // Scenario 2 & 3 – forest stalker monster (guards cauldron in Scen 2, guards monoliths in Scen 3).
+    static void BuildMonster(GameObject parent, ForestQuestManager questManager)
     {
         Material bodyMat = GetLitMaterial("MonsterBark",
             new Color(0.12f, 0.08f, 0.08f), 0.1f, 0.1f, 0.2f, new Color(0.35f, 0.05f, 0.05f));
@@ -292,8 +294,8 @@ public static class ForestStageBuilder
 
         GameObject monsterRoot = new GameObject("ForestMonster");
         monsterRoot.transform.SetParent(parent.transform, false);
-        // Spawn in northern hedge corridor (-8 on Z), far from player's starting area (+7.5 on Z)
-        monsterRoot.transform.position = new Vector3(0f, 0f, -8f);
+        // Start near the ancient cauldron shrine
+        monsterRoot.transform.position = new Vector3(-3.2f, 0f, -2.5f);
 
         // Visual model container
         GameObject model = new GameObject("Model");
@@ -345,7 +347,10 @@ public static class ForestStageBuilder
 
         // Controller component
         ForestMonster monsterComp = monsterRoot.AddComponent<ForestMonster>();
-        monsterComp.Setup(mLight, model.transform, leftArmPivot.transform, rightArmPivot.transform);
+        monsterComp.Setup(mLight, model.transform, head.transform, leftArmPivot.transform, rightArmPivot.transform);
+
+        if (questManager != null) questManager.monster = monsterComp;
+        monsterRoot.SetActive(false); // Initially hidden during Scenario 1
     }
 
     // Scenario 3 – 3 runic monolith pillars in a triangle formation.

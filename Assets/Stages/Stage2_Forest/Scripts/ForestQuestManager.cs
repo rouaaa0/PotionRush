@@ -4,39 +4,40 @@ using UnityEngine;
 
 // ============================================================
 //  ForestQuestManager  –  Stage 2 Enchanted Forest
-//  Controls the 4-scenario quest chain.
+//  Controls the 4-scenario quest chain with 5-second countdowns
+//  and tactical monster guard behaviors.
 //
 //  Scenario 1  "First Gathering"
 //      Collect 2 Mushrooms + 1 Crystal then brew.
+//      -> 5s animated countdown before Scenario 2!
 //
-//  Scenario 2  "The Shifting Hedge"
-//      Hedge walls rise from the ground (labyrinth).
-//      Collect 3 Herbs + 1 Crystal then brew.
+//  Scenario 2  "The Cauldron Guardian"
+//      Hedge labyrinth. Monster guards/patrols around the Cauldron.
+//      Wizard must gather 3 Herbs + 1 Crystal and sneak past or
+//      lure the monster away to brew!
+//      -> 5s animated countdown before Scenario 3!
 //
-//  Scenario 3  "Monolith Awakening"
-//      Activate 3 glowing rune pillars in any order
-//      by walking near them, then brew.
+//  Scenario 3  "The Guarded Relics"
+//      Monster actively patrols between the 3 rune monoliths.
+//      Wizard must activate all 3 monoliths without touching the monster!
+//      Once active, brew at the cauldron to finish!
 //
 //  Scenario 4  "Master Brew"
-//      All ingredient types respawn in new spots.
-//      Collect 2 Mushrooms + 2 Crystals + 2 Herbs then final brew.
+//      Collect all 6 ingredients spread through the forest and final brew!
 // ============================================================
 public class ForestQuestManager : MonoBehaviour
 {
-    // ── public state ───────────────────────────────────────────
     public static ForestQuestManager Instance { get; private set; }
 
     public int CurrentScenario { get; private set; } = 1;
     public string QuestBannerText { get; private set; } = "";
 
-    // Live list of active ingredient transforms tracked by ForestMinimap.
-    // Key = Transform, Value = icon type:
-    // (int)IngredientType (0=Mush, 1=Cryst, 2=Herb), -1=Cauldron, 10=Monolith
     public List<(Transform t, int iconType)> MinimapIcons { get; private set; }
         = new List<(Transform, int)>();
 
     [Header("Set by builder")]
     public Transform cauldronTransform;
+    public ForestMonster monster;
 
     GameObject scenario1Root;
     GameObject scenario2Root;
@@ -55,7 +56,6 @@ public class ForestQuestManager : MonoBehaviour
 
     void Start()
     {
-        // Intercept Cauldron completion so Scenario 1-3 don't trigger the end game screen!
         Cauldron.CustomBrewCompleted = OnCustomBrewCompleted;
         Cauldron.CanBrewCheck = CanCauldronBrew;
 
@@ -63,6 +63,9 @@ public class ForestQuestManager : MonoBehaviour
         scenario2Root = FindChild("Scenario2_Hedge");
         scenario3Root = FindChild("Scenario3_Monoliths");
         scenario4Root = FindChild("Scenario4_FinalIngredients");
+
+        if (monster == null)
+            monster = FindFirstObjectByType<ForestMonster>(FindObjectsInactive.Include);
 
         ActivateScenario(1);
     }
@@ -90,12 +93,10 @@ public class ForestQuestManager : MonoBehaviour
 
         if (CurrentScenario < 4)
         {
-            // Complete current scenario with celebration, then progress to next!
             StartCoroutine(ScenarioTransitionRoutine(cauldron));
         }
         else
         {
-            // Scenario 4: The final master brew! Trigger true stage victory!
             if (StageManager.Instance != null)
             {
                 StageManager.Instance.CompleteBrew();
@@ -109,7 +110,7 @@ public class ForestQuestManager : MonoBehaviour
         int completedScenario = CurrentScenario;
         int next = CurrentScenario + 1;
 
-        Debug.Log($"[ForestQuestManager] Scenario {completedScenario} completed! Preparing Scenario {next}...");
+        Debug.Log($"[ForestQuestManager] Scenario {completedScenario} completed! Starting 5-second countdown for Scenario {next}...");
 
         // 1. Mini-celebration burst at cauldron
         if (cauldron != null)
@@ -123,10 +124,10 @@ public class ForestQuestManager : MonoBehaviour
                 scoreProp.SetValue(StageManager.Instance, StageManager.Instance.Score + 100);
         }
 
-        QuestBannerText = $"Scenario {completedScenario} Complete! ✨";
+        QuestBannerText = $"Scenario {completedScenario} Réussi ! ✨";
 
-        // 3. Wait for celebration particles
-        yield return new WaitForSeconds(2.2f);
+        // 3. Brief moment for celebration particles
+        yield return new WaitForSeconds(1.8f);
 
         // 4. Reset cauldron and brew state
         if (cauldron != null)
@@ -138,12 +139,43 @@ public class ForestQuestManager : MonoBehaviour
             StageManager.Instance.SetBrewing(false);
         }
 
-        // 5. Restore player movement
+        // 5. Freeze player during the 5-second countdown
         PlayerController player = FindFirstObjectByType<PlayerController>();
-        if (player != null) player.CanMove = true;
+        if (player != null) player.CanMove = false;
 
-        // 6. Launch next scenario
+        // 6. 5-second countdown on screen
+        if (ForestMinimap.Instance != null)
+        {
+            string title = "";
+            string subtitle = "";
+
+            if (next == 2)
+            {
+                title = "SCÉNARIO 2 : LE GARDIEN DU CHAUDRON";
+                subtitle = "Le monstre garde le chaudron ! Récoltez les herbes et semez-le !";
+            }
+            else if (next == 3)
+            {
+                title = "SCÉNARIO 3 : LES RELIQUES GARDÉES";
+                subtitle = "Le monstre garde les 3 monolithes ! Activez-les sans vous faire toucher !";
+            }
+            else if (next == 4)
+            {
+                title = "SCÉNARIO 4 : LE BRASSAGE FINAL";
+                subtitle = "Rassemblez tous les ingrédients disséminés pour la potion suprême !";
+            }
+
+            yield return ForestMinimap.Instance.PlayCountdownRoutine(5, title, subtitle);
+        }
+        else
+        {
+            yield return new WaitForSeconds(5.0f);
+        }
+
+        // 7. Unfreeze player and launch the scenario
+        if (player != null) player.CanMove = true;
         isTransitioning = false;
+
         ActivateScenario(next);
     }
 
@@ -151,7 +183,7 @@ public class ForestQuestManager : MonoBehaviour
     {
         CurrentScenario = n;
 
-        // Hide all scenario objects first
+        // Hide all scenario specific roots first
         SetActive(scenario1Root, false);
         SetActive(scenario2Root, false);
         SetActive(scenario3Root, false);
@@ -161,9 +193,14 @@ public class ForestQuestManager : MonoBehaviour
         if (cauldronTransform != null)
             MinimapIcons.Add((cauldronTransform, -1)); // -1 = cauldron icon
 
+        if (monster == null)
+            monster = FindFirstObjectByType<ForestMonster>(FindObjectsInactive.Include);
+
         switch (n)
         {
             case 1:
+                if (monster != null) monster.gameObject.SetActive(false);
+
                 SetActive(scenario1Root, true);
                 RegisterIngredientIcons(scenario1Root);
                 SetRecipe(new[] {
@@ -174,30 +211,50 @@ public class ForestQuestManager : MonoBehaviour
                 break;
 
             case 2:
+                // Scenario 2: Hedge labyrinth + Monster guards the cauldron
                 SetActive(scenario2Root, true);
                 RegisterIngredientIcons(scenario2Root);
-                // Register the monster on the minimap (icon type 99)
-                ForestMonster monster = scenario2Root.GetComponentInChildren<ForestMonster>(true);
+
                 if (monster != null)
-                    MinimapIcons.Add((monster.transform, 99));
+                {
+                    monster.gameObject.SetActive(true);
+                    Vector3 cPos = cauldronTransform != null ? cauldronTransform.position : new Vector3(0f, 0f, -2.5f);
+                    monster.SetMode(MonsterMode.GuardCauldron, cPos);
+                    MinimapIcons.Add((monster.transform, 99)); // 99 = Monster threat
+                }
 
                 SetRecipe(new[] {
                     (IngredientType.Herb,    3),
                     (IngredientType.Crystal, 1)
                 });
-                QuestBannerText = "Fuyez le monstre ! (3 herbes & 1 cristal)";
+                QuestBannerText = "Le monstre garde le chaudron ! (3 herbes & 1 cristal)";
                 break;
 
             case 3:
+                // Scenario 3: Monoliths + Monster patrols between them
                 SetActive(scenario3Root, true);
                 monolithsActivated = 0;
-                // Empty recipe so RecipeComplete evaluates to true, but CanBrewCheck requires 3 monoliths
                 SetRecipe(System.Array.Empty<(IngredientType, int)>());
                 RegisterMonolithIcons(scenario3Root);
-                QuestBannerText = "Activate 3 rune monoliths";
+
+                if (monster != null)
+                {
+                    monster.gameObject.SetActive(true);
+                    monster.SetMode(MonsterMode.GuardObjectives, Vector3.zero, new Vector3[] {
+                        new Vector3( 0f, 0f, -6f),
+                        new Vector3(-6f, 0f,  4f),
+                        new Vector3( 6f, 0f,  4f)
+                    });
+                    MinimapIcons.Add((monster.transform, 99));
+                }
+
+                QuestBannerText = "Activez 3 monolithes sans toucher le monstre !";
                 break;
 
             case 4:
+                // Scenario 4: Master gather
+                if (monster != null) monster.gameObject.SetActive(false);
+
                 SetActive(scenario4Root, true);
                 RegisterIngredientIcons(scenario4Root);
                 SetRecipe(new[] {
@@ -205,7 +262,7 @@ public class ForestQuestManager : MonoBehaviour
                     (IngredientType.Crystal,  2),
                     (IngredientType.Herb,     2)
                 });
-                QuestBannerText = "Master Brew – collect all!";
+                QuestBannerText = "Master Brew – collectez tout !";
                 break;
         }
 
@@ -219,8 +276,8 @@ public class ForestQuestManager : MonoBehaviour
         monolithsActivated++;
         int remaining = MonolithsRequired - monolithsActivated;
         QuestBannerText = remaining > 0
-            ? $"Activate {remaining} more monolith{(remaining > 1 ? "s" : "")}"
-            : "All active! Brew at cauldron!";
+            ? $"Activez encore {remaining} monolithe{(remaining > 1 ? "s" : "")} !"
+            : "Tous allumés ! Foncez au chaudron brasser !";
 
         Debug.Log($"[ForestQuestManager] Monolith {index} activated ({monolithsActivated}/{MonolithsRequired})");
     }
@@ -231,7 +288,6 @@ public class ForestQuestManager : MonoBehaviour
 
         StageManager.Instance.config.recipe.Clear();
 
-        // Clear the internal collected dictionary using reflection
         var collectedField = typeof(StageManager).GetField("collected",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         if (collectedField != null)
@@ -244,7 +300,6 @@ public class ForestQuestManager : MonoBehaviour
         foreach (var (type, amount) in entries)
             StageManager.Instance.config.recipe.Add(new RecipeEntry { type = type, amount = amount });
 
-        // Refresh the HUD Objectives card immediately!
         HUD hud = FindFirstObjectByType<HUD>();
         if (hud != null) hud.RebuildObjectives();
     }

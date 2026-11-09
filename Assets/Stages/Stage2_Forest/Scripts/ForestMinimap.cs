@@ -23,6 +23,8 @@ using UnityEngine.UI;
 // ============================================================
 public class ForestMinimap : MonoBehaviour
 {
+    public static ForestMinimap Instance { get; private set; }
+
     // ── dimensions & tuneables ─────────────────────────────────
     const float MapWorldRadius  = 20f;   // world metres from player to edge
     const float DisplayRadius   = 85f;   // radius of the circle in reference UI pixels
@@ -31,13 +33,19 @@ public class ForestMinimap : MonoBehaviour
     const float BorderThickness = 5f;    // gold border ring thickness
 
     // ── UI components ──────────────────────────────────────────
-    Canvas     minimapCanvas;
+    Canvas        minimapCanvas;
     RectTransform iconContainer;
-    Image      bgImage;
-    Image      borderImage;
-    Image      playerIcon;
-    Text       questText;
-    Text       scenarioLabel;
+    Image         bgImage;
+    Image         borderImage;
+    Image         playerIcon;
+    Text          questText;
+    Text          scenarioLabel;
+
+    // ── Countdown Overlay components ───────────────────────────
+    GameObject countdownPanel;
+    Text       countdownTitleText;
+    Text       countdownSubtitleText;
+    Text       countdownNumberText;
 
     readonly List<(Transform target, int type, Image icon)> trackedIcons
         = new List<(Transform, int, Image)>();
@@ -47,6 +55,11 @@ public class ForestMinimap : MonoBehaviour
     Sprite arrowSprite;
 
     Transform playerTransform;
+
+    void Awake()
+    {
+        Instance = this;
+    }
 
     void Start()
     {
@@ -201,6 +214,88 @@ public class ForestMinimap : MonoBehaviour
         qtRT.pivot     = new Vector2(0.5f, 1f);
         qtRT.sizeDelta = new Vector2(circleDiameter + 5f, 44f);
         qtRT.anchoredPosition = new Vector2(0f, -26f);
+
+        // ── Fullscreen Center Countdown Overlay ────────────────
+        countdownPanel = new GameObject("CountdownOverlay");
+        countdownPanel.transform.SetParent(canvasGO.transform, false);
+        RectTransform cPanelRT = countdownPanel.AddComponent<RectTransform>();
+        cPanelRT.anchorMin = new Vector2(0.5f, 0.5f);
+        cPanelRT.anchorMax = new Vector2(0.5f, 0.5f);
+        cPanelRT.pivot     = new Vector2(0.5f, 0.5f);
+        cPanelRT.sizeDelta = new Vector2(740f, 360f);
+        cPanelRT.anchoredPosition = new Vector2(0f, 20f);
+
+        Image cBg = countdownPanel.AddComponent<Image>();
+        cBg.color = new Color(0.04f, 0.09f, 0.05f, 0.95f);
+        cBg.raycastTarget = false;
+
+        GameObject cBorder = new GameObject("Border");
+        cBorder.transform.SetParent(countdownPanel.transform, false);
+        Image bImg = cBorder.AddComponent<Image>();
+        bImg.color = new Color(0.92f, 0.72f, 0.22f, 0.9f);
+        bImg.raycastTarget = false;
+        RectTransform bRT = cBorder.GetComponent<RectTransform>();
+        bRT.anchorMin = Vector2.zero;
+        bRT.anchorMax = Vector2.one;
+        bRT.sizeDelta = new Vector2(4f, 4f);
+        bRT.anchoredPosition = Vector2.zero;
+
+        countdownTitleText = MakeText(countdownPanel.transform, "Title",
+            "SCÉNARIO 2", 30, new Color(0.95f, 0.80f, 0.25f, 1f));
+        RectTransform tRT = countdownTitleText.GetComponent<RectTransform>();
+        tRT.anchorMin = tRT.anchorMax = new Vector2(0.5f, 1f);
+        tRT.pivot     = new Vector2(0.5f, 1f);
+        tRT.sizeDelta = new Vector2(700f, 45f);
+        tRT.anchoredPosition = new Vector2(0f, -20f);
+
+        countdownSubtitleText = MakeText(countdownPanel.transform, "Subtitle",
+            "Le monstre garde le chaudron !", 20, new Color(1f, 0.95f, 0.85f, 1f));
+        RectTransform stRT = countdownSubtitleText.GetComponent<RectTransform>();
+        stRT.anchorMin = stRT.anchorMax = new Vector2(0.5f, 1f);
+        stRT.pivot     = new Vector2(0.5f, 1f);
+        stRT.sizeDelta = new Vector2(700f, 55f);
+        stRT.anchoredPosition = new Vector2(0f, -68f);
+
+        countdownNumberText = MakeText(countdownPanel.transform, "Number",
+            "5", 100, new Color(0.95f, 0.75f, 0.15f, 1f));
+        RectTransform nRT = countdownNumberText.GetComponent<RectTransform>();
+        nRT.anchorMin = nRT.anchorMax = new Vector2(0.5f, 0.5f);
+        nRT.pivot     = new Vector2(0.5f, 0.5f);
+        nRT.sizeDelta = new Vector2(600f, 130f);
+        nRT.anchoredPosition = new Vector2(0f, -40f);
+
+        countdownPanel.SetActive(false);
+    }
+
+    public System.Collections.IEnumerator PlayCountdownRoutine(int seconds, string title, string subtitle)
+    {
+        if (countdownPanel == null) yield break;
+
+        countdownTitleText.text = title;
+        countdownSubtitleText.text = subtitle;
+        countdownPanel.SetActive(true);
+
+        for (int i = seconds; i >= 1; i--)
+        {
+            countdownNumberText.text = i.ToString();
+            countdownNumberText.fontSize = 100;
+
+            float elapsed = 0f;
+            while (elapsed < 1.0f)
+            {
+                elapsed += Time.deltaTime;
+                float punch = Mathf.Clamp01(1f - elapsed / 0.35f);
+                countdownNumberText.transform.localScale = Vector3.one * (1f + punch * 0.35f);
+                yield return null;
+            }
+        }
+
+        countdownNumberText.text = "C'EST PARTI !";
+        countdownNumberText.fontSize = 68;
+        countdownNumberText.transform.localScale = Vector3.one * 1.15f;
+        yield return new WaitForSeconds(0.6f);
+
+        countdownPanel.SetActive(false);
     }
 
     // ── icon synchronization ───────────────────────────────────
