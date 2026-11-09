@@ -235,7 +235,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9febb682c10314cbd9eeb06c80f49a58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Cauldron
-  activateRadius: 2.2
+  activateRadius: 2.5
 --- !u!1 &7253896125124963408
 GameObject:
   m_ObjectHideFlags: 0

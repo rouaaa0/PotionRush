@@ -109,6 +109,7 @@ public class GameFeedback : MonoBehaviour
 
     void Play(AudioClip clip, float pitch)
     {
+        if (clip == null) return;
         effects.pitch = pitch;
         effects.PlayOneShot(clip);
     }

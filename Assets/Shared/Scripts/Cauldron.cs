@@ -5,7 +5,7 @@ using UnityEngine;
 // It also animates itself: the liquid pulses and turns gold, bubbles rise and the light glows.
 public class Cauldron : MonoBehaviour
 {
-    [SerializeField] float activateRadius = 2.2f;
+    [SerializeField] float activateRadius = 2.5f;
 
     static readonly Color Green = new Color(0.37f, 0.89f, 0.63f);
     static readonly Color Gold = new Color(1f, 0.76f, 0.3f);
@@ -67,6 +67,7 @@ public class Cauldron : MonoBehaviour
             shakes = 0;
             player.CanMove = false;
             stage.SetBrewing(true);
+            stage.ReportBrewProgress(0f);
         }
 
         Animate(stage);
