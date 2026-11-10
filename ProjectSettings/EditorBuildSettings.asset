@@ -12,6 +12,9 @@ EditorBuildSettings:
     path: Assets/Stages/Stage1_Lab/Stage1_Lab.unity
     guid: 9a44f2d521a324da2ae4d4ac7fd46906
   - enabled: 1
+    path: Assets/Stages/Stage2_Forest/Stage2_Forest.unity
+    guid: 0ea074950210f4111ad1e42c29c902d5
+  - enabled: 1
     path: Assets/Stages/Stage3_Cave/Stage3_Cave.unity
     guid: 3440e6bbbddeb454999e83f1a0c0101b
   - enabled: 1

@@ -11,6 +11,7 @@ public class PlayerController : MonoBehaviour
 
     // The cauldron turns this off while the player is brewing.
     public bool CanMove = true;
+    public float SpeedMultiplier { get; set; } = 1f;
 
     CharacterController controller;
     Vector3 startPosition;
@@ -36,7 +37,7 @@ public class PlayerController : MonoBehaviour
         Vector3 direction = new Vector3(-input.Move.x, 0f, -input.Move.y);
         if (direction.sqrMagnitude < 0.001f) return;
 
-        controller.SimpleMove(direction * speed);
+        controller.SimpleMove(direction * (speed * SpeedMultiplier));
 
         Quaternion target = Quaternion.LookRotation(direction, Vector3.up);
         transform.rotation = Quaternion.RotateTowards(transform.rotation, target, turnSpeed * Time.deltaTime);

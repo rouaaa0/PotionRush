@@ -18,6 +18,7 @@ public class StageManager : MonoBehaviour
     public int Score { get; private set; }
     public int BonusPoints { get; private set; } // extra points from optional pickups (gems...)
     public bool Brewing { get; private set; } // true while the player is at the cauldron
+    public string FailReason { get; private set; }
 
     public event Action<IngredientType> IngredientCollected;
     public event Action<float> BrewProgressed; // 0 to 1
@@ -47,9 +48,16 @@ public class StageManager : MonoBehaviour
         if (TimeLeft <= 0f)
         {
             TimeLeft = 0f;
-            State = StageState.Lost;
-            StageLost?.Invoke();
+            FailStage("Temps écoulé");
         }
+    }
+
+    public void FailStage(string reason = null)
+    {
+        if (State != StageState.Playing) return;
+        FailReason = reason;
+        State = StageState.Lost;
+        StageLost?.Invoke();
     }
 
     public int Required(IngredientType type)

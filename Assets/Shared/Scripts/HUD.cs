@@ -188,6 +188,18 @@ public class HUD : MonoBehaviour
         objectivesCard.sizeDelta = new Vector2(objectivesCard.sizeDelta.x, -y + 22f);
     }
 
+    public void RebuildObjectives()
+    {
+        foreach (ObjectiveRow row in rows)
+        {
+            if (row.dot != null) Destroy(row.dot.gameObject);
+            if (row.label != null) Destroy(row.label.gameObject);
+            if (row.count != null) Destroy(row.count.gameObject);
+        }
+        rows.Clear();
+        BuildObjectives();
+    }
+
     Text NewText(string name, TextAnchor align, int size)
     {
         GameObject go = new GameObject(name, typeof(RectTransform), typeof(Text));
@@ -422,7 +434,7 @@ public class HUD : MonoBehaviour
         resultPanel.SetActive(true);
         ShowNextButton(false);
         popTime = 0f;
-        resultTitle.text = "Temps écoulé";
+        resultTitle.text = !string.IsNullOrEmpty(stage.FailReason) ? stage.FailReason : "Temps écoulé";
         resultTitle.color = new Color(1f, 0.3f, 0.25f, 1f);
         resultDetails.text = "Score   " + stage.Score;
     }
