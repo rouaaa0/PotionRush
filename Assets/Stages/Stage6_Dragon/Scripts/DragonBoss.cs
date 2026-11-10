@@ -89,6 +89,9 @@ public class DragonBoss : MonoBehaviour
 
     void Start()
     {
+        // final boss: big celebration + "next stages?" popup when the stage is won
+        if (GetComponent<FinalBossVictory>() == null) gameObject.AddComponent<FinalBossVictory>();
+
         stage = StageManager.Instance;
         player = FindFirstObjectByType<PlayerController>();
         if (player != null)
