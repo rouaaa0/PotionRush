@@ -269,11 +269,8 @@ public class ForestMonster : MonoBehaviour
         // Player managed to escape far into the hedges!
         if (distToPlayer > loseRange)
         {
-            // Return to appropriate guard behavior
-            if (ForestQuestManager.Instance != null && ForestQuestManager.Instance.CurrentScenario == 3)
-                currentMode = MonsterMode.GuardObjectives;
-            else
-                currentMode = MonsterMode.GuardCauldron;
+            // Return to guarding the cauldron (the monolith scenario was removed)
+            currentMode = MonsterMode.GuardCauldron;
             return;
         }
 
@@ -371,6 +368,12 @@ public class ForestMonster : MonoBehaviour
 
         // Double-check: wizard is safe if he's currently brewing at the cauldron
         if (StageManager.Instance != null && StageManager.Instance.Brewing)
+            return;
+
+        // no catching once the stage is won/lost, or during the countdown between scenarios
+        if (StageManager.Instance != null && StageManager.Instance.State != StageState.Playing)
+            return;
+        if (ForestQuestManager.Instance != null && ForestQuestManager.Instance.IsTransitioning)
             return;
 
         caught = true;

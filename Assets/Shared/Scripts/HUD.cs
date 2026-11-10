@@ -190,6 +190,9 @@ public class HUD : MonoBehaviour
 
     public void RebuildObjectives()
     {
+        // Called before our Start() ran: nothing is built yet, and Start() will build the rows itself.
+        if (stage == null) return;
+
         foreach (ObjectiveRow row in rows)
         {
             if (row.dot != null) Destroy(row.dot.gameObject);

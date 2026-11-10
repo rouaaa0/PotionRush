@@ -1,29 +1,29 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 // ============================================================
 //  ForestQuestManager  –  Stage 2 Enchanted Forest
-//  Controls the 4-scenario quest chain with 5-second countdowns
+//  Controls the 3-scenario quest chain with 3-second countdowns
 //  and tactical monster guard behaviors.
 //
 //  Scenario 1  "First Gathering"
 //      Collect 2 Mushrooms + 1 Crystal then brew.
-//      -> 5s animated countdown before Scenario 2!
+//      -> 3s animated countdown before Scenario 2!
 //
 //  Scenario 2  "The Cauldron Guardian"
 //      Hedge labyrinth. Monster guards/patrols around the Cauldron.
 //      Wizard must gather 3 Herbs + 1 Crystal and sneak past or
 //      lure the monster away to brew!
-//      -> 5s animated countdown before Scenario 3!
+//      -> 3s animated countdown before Scenario 3!
 //
-//  Scenario 3  "The Guarded Relics"
-//      Monster actively patrols between the 3 rune monoliths.
-//      Wizard must activate all 3 monoliths without touching the monster!
-//      Once active, brew at the cauldron to finish!
-//
-//  Scenario 4  "Master Brew"
+//  Scenario 3  "Master Brew"
 //      Collect all 6 ingredients spread through the forest and final brew!
+//      (uses the "Scenario4_FinalIngredients" objects in the scene)
+//
+//  The old monolith scenario was removed: its "Scenario3_Monoliths" objects
+//  stay hidden for the whole stage.
 // ============================================================
 public class ForestQuestManager : MonoBehaviour
 {
@@ -39,19 +39,56 @@ public class ForestQuestManager : MonoBehaviour
     public Transform cauldronTransform;
     public ForestMonster monster;
 
+    // Brewing this scenario wins the whole stage (wings + flight + Victoire card with Suivant).
+    // Scenario 2 is the last one now; set this back to 3 to bring the Master Brew back.
+    public const int LastScenario = 2;
+
+    // true during the "Scenario réussi" + countdown pause between two scenarios
+    public bool IsTransitioning => isTransitioning;
+
     GameObject scenario1Root;
     GameObject scenario2Root;
-    GameObject scenario3Root;
-    GameObject scenario4Root;
+    GameObject finalScenarioRoot;
+    GameObject unusedMonolithsRoot; // removed scenario, always kept hidden
 
-    int monolithsActivated = 0;
-    const int MonolithsRequired = 3;
     bool isTransitioning = false;
+
+    // Checkpoint: "static" values survive the scene reload done by the Rejouer button.
+    // When the player loses, Rejouer restarts the scenario they were on instead of Scenario 1.
+    static int checkpointScenario = 1;
+    static int checkpointScore = 0;
+    static bool resumeFromCheckpoint = false;
+    static string forestSceneName;
+
+    // Any time another scene opens (menu, stage select, next stage) the checkpoint is forgotten,
+    // so coming back to the forest later starts again from Scenario 1.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ListenForSceneChanges()
+    {
+        checkpointScenario = 1;
+        checkpointScore = 0;
+        resumeFromCheckpoint = false;
+        SceneManager.sceneLoaded -= OnAnySceneLoaded;
+        SceneManager.sceneLoaded += OnAnySceneLoaded;
+    }
+
+    static void OnAnySceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (scene.name != forestSceneName) resumeFromCheckpoint = false;
+    }
+
+    void OnStageLost()
+    {
+        resumeFromCheckpoint = true; // checkpointScenario/checkpointScore were saved when the scenario began
+    }
 
     void Awake()
     {
         Instance = this;
         MinimapIcons = new List<(Transform, int)>();
+
+        // invisible walls around the ground so the player can't fall off the map
+        if (GetComponent<ForestBounds>() == null) gameObject.AddComponent<ForestBounds>();
     }
 
     void Start()
@@ -61,37 +98,51 @@ public class ForestQuestManager : MonoBehaviour
 
         scenario1Root = FindChild("Scenario1_Ingredients");
         scenario2Root = FindChild("Scenario2_Hedge");
-        scenario3Root = FindChild("Scenario3_Monoliths");
-        scenario4Root = FindChild("Scenario4_FinalIngredients");
+        unusedMonolithsRoot = FindChild("Scenario3_Monoliths");
+        finalScenarioRoot = FindChild("Scenario4_FinalIngredients");
 
         if (monster == null)
             monster = FindFirstObjectByType<ForestMonster>(FindObjectsInactive.Include);
 
-        ActivateScenario(1);
+        forestSceneName = gameObject.scene.name;
+        if (StageManager.Instance != null) StageManager.Instance.StageLost += OnStageLost;
+
+        int startScenario = 1;
+        if (resumeFromCheckpoint)
+        {
+            resumeFromCheckpoint = false;
+            startScenario = checkpointScenario;
+            SetScore(checkpointScore); // keep the points earned in the scenarios already finished
+        }
+
+        ActivateScenario(startScenario);
+    }
+
+    static void SetScore(int value)
+    {
+        if (StageManager.Instance == null) return;
+        var scoreProp = typeof(StageManager).GetProperty("Score");
+        if (scoreProp != null && scoreProp.CanWrite)
+            scoreProp.SetValue(StageManager.Instance, value);
     }
 
     void OnDestroy()
     {
+        if (StageManager.Instance != null) StageManager.Instance.StageLost -= OnStageLost;
         Cauldron.CustomBrewCompleted = null;
         Cauldron.CanBrewCheck = null;
     }
 
     bool CanCauldronBrew()
     {
-        if (isTransitioning) return false;
-
-        // In Scenario 3, player must awaken all 3 monoliths first!
-        if (CurrentScenario == 3)
-            return monolithsActivated >= MonolithsRequired;
-
-        return true;
+        return !isTransitioning;
     }
 
     void OnCustomBrewCompleted(Cauldron cauldron)
     {
         if (isTransitioning) return;
 
-        if (CurrentScenario < 4)
+        if (CurrentScenario < LastScenario)
         {
             StartCoroutine(ScenarioTransitionRoutine(cauldron));
         }
@@ -110,11 +161,14 @@ public class ForestQuestManager : MonoBehaviour
         int completedScenario = CurrentScenario;
         int next = CurrentScenario + 1;
 
-        Debug.Log($"[ForestQuestManager] Scenario {completedScenario} completed! Starting 5-second countdown for Scenario {next}...");
+        Debug.Log($"[ForestQuestManager] Scenario {completedScenario} completed! Starting 3-second countdown for Scenario {next}...");
 
         // 1. Mini-celebration burst at cauldron
         if (cauldron != null)
             cauldron.CelebrateMini();
+
+        // the ghost leaves while the player is frozen for the countdown (the next scenario brings it back if needed)
+        if (monster != null) monster.gameObject.SetActive(false);
 
         // 2. Award bonus points
         if (StageManager.Instance != null)
@@ -139,11 +193,11 @@ public class ForestQuestManager : MonoBehaviour
             StageManager.Instance.SetBrewing(false);
         }
 
-        // 5. Freeze player during the 5-second countdown
+        // 5. Freeze player during the 3-second countdown
         PlayerController player = FindFirstObjectByType<PlayerController>();
         if (player != null) player.CanMove = false;
 
-        // 6. 5-second countdown on screen
+        // 6. 3-second countdown on screen
         if (ForestMinimap.Instance != null)
         {
             string title = "";
@@ -156,20 +210,15 @@ public class ForestQuestManager : MonoBehaviour
             }
             else if (next == 3)
             {
-                title = "SCÉNARIO 3 : LES MONOLITHES HANTÉS";
-                subtitle = "Le fantôme hante les 3 monolithes ! Activez-les sans vous faire toucher !";
-            }
-            else if (next == 4)
-            {
-                title = "SCÉNARIO 4 : LE BRASSAGE FINAL";
+                title = "SCÉNARIO 3 : LE BRASSAGE FINAL";
                 subtitle = "Rassemblez tous les ingrédients disséminés pour la potion suprême !";
             }
 
-            yield return ForestMinimap.Instance.PlayCountdownRoutine(5, title, subtitle);
+            yield return ForestMinimap.Instance.PlayCountdownRoutine(3, title, subtitle);
         }
         else
         {
-            yield return new WaitForSeconds(5.0f);
+            yield return new WaitForSeconds(3.0f);
         }
 
         // 7. Unfreeze player and launch the scenario
@@ -183,11 +232,15 @@ public class ForestQuestManager : MonoBehaviour
     {
         CurrentScenario = n;
 
+        // save the checkpoint: losing from now on restarts this scenario with this score
+        checkpointScenario = n;
+        checkpointScore = StageManager.Instance != null ? StageManager.Instance.Score : 0;
+
         // Hide all scenario specific roots first
         SetActive(scenario1Root, false);
         SetActive(scenario2Root, false);
-        SetActive(scenario3Root, false);
-        SetActive(scenario4Root, false);
+        SetActive(unusedMonolithsRoot, false);
+        SetActive(finalScenarioRoot, false);
 
         MinimapIcons.Clear();
         if (cauldronTransform != null)
@@ -231,32 +284,11 @@ public class ForestQuestManager : MonoBehaviour
                 break;
 
             case 3:
-                // Scenario 3: Monoliths + Monster patrols between them
-                SetActive(scenario3Root, true);
-                monolithsActivated = 0;
-                SetRecipe(System.Array.Empty<(IngredientType, int)>());
-                RegisterMonolithIcons(scenario3Root);
-
-                if (monster != null)
-                {
-                    monster.gameObject.SetActive(true);
-                    monster.SetMode(MonsterMode.GuardObjectives, Vector3.zero, new Vector3[] {
-                        new Vector3( 0f, 0f, -6f),
-                        new Vector3(-6f, 0f,  4f),
-                        new Vector3( 6f, 0f,  4f)
-                    });
-                    MinimapIcons.Add((monster.transform, 99));
-                }
-
-                QuestBannerText = "Activez 3 monolithes sans toucher le fantôme !";
-                break;
-
-            case 4:
-                // Scenario 4: Master gather
+                // Scenario 3: Master gather (final)
                 if (monster != null) monster.gameObject.SetActive(false);
 
-                SetActive(scenario4Root, true);
-                RegisterIngredientIcons(scenario4Root);
+                SetActive(finalScenarioRoot, true);
+                RegisterIngredientIcons(finalScenarioRoot);
                 SetRecipe(new[] {
                     (IngredientType.Mushroom, 2),
                     (IngredientType.Crystal,  2),
@@ -269,18 +301,8 @@ public class ForestQuestManager : MonoBehaviour
         Debug.Log($"[ForestQuestManager] Scenario {n} active: {QuestBannerText}");
     }
 
-    public void MonolithActivated(int index)
-    {
-        if (CurrentScenario != 3) return;
-
-        monolithsActivated++;
-        int remaining = MonolithsRequired - monolithsActivated;
-        QuestBannerText = remaining > 0
-            ? $"Activez encore {remaining} monolithe{(remaining > 1 ? "s" : "")} !"
-            : "Tous allumés ! Foncez au chaudron brasser !";
-
-        Debug.Log($"[ForestQuestManager] Monolith {index} activated ({monolithsActivated}/{MonolithsRequired})");
-    }
+    // The monolith scenario was removed; ForestRunicMonolith still calls this, so it does nothing.
+    public void MonolithActivated(int index) { }
 
     void SetRecipe((IngredientType type, int amount)[] entries)
     {
@@ -309,13 +331,6 @@ public class ForestQuestManager : MonoBehaviour
         if (root == null) return;
         foreach (Ingredient ing in root.GetComponentsInChildren<Ingredient>(true))
             MinimapIcons.Add((ing.transform, (int)ing.type));
-    }
-
-    void RegisterMonolithIcons(GameObject root)
-    {
-        if (root == null) return;
-        foreach (ForestRunicMonolith m in root.GetComponentsInChildren<ForestRunicMonolith>(true))
-            MinimapIcons.Add((m.transform, 10));
     }
 
     void SetActive(GameObject go, bool active)

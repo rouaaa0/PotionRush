@@ -18,7 +18,7 @@ using UnityEngine.UI;
 //    Mint   glow dot   = Runic Monolith (icon type 10)
 //
 //  Below the compass, a dark ornate card displays:
-//    "SCENARIO X / 4"
+//    "SCENARIO X / 3"
 //    Current objective text from ForestQuestManager
 // ============================================================
 public class ForestMinimap : MonoBehaviour
@@ -197,9 +197,9 @@ public class ForestMinimap : MonoBehaviour
         barRT.sizeDelta = new Vector2(circleDiameter + 15f, 2f);
         barRT.anchoredPosition = Vector2.zero;
 
-        // Scenario label ("SCENARIO 1 / 4")
+        // Scenario label ("SCENARIO 1 / 3")
         scenarioLabel = MakeText(cardGO.transform, "ScenarioLabel",
-            "SCENARIO 1 / 4", 13, new Color(0.95f, 0.80f, 0.30f, 1f));
+            "SCENARIO 1 / " + ForestQuestManager.LastScenario, 13, new Color(0.95f, 0.80f, 0.30f, 1f));
         RectTransform slRT = scenarioLabel.GetComponent<RectTransform>();
         slRT.anchorMin = slRT.anchorMax = new Vector2(0.5f, 1f);
         slRT.pivot     = new Vector2(0.5f, 1f);
@@ -440,7 +440,7 @@ public class ForestMinimap : MonoBehaviour
             questText.text = ForestQuestManager.Instance.QuestBannerText;
 
         if (scenarioLabel != null)
-            scenarioLabel.text = $"SCENARIO {ForestQuestManager.Instance.CurrentScenario} / 4";
+            scenarioLabel.text = $"SCENARIO {ForestQuestManager.Instance.CurrentScenario} / {ForestQuestManager.LastScenario}";
     }
 
     // ── UI element creators ────────────────────────────────────
