@@ -72,6 +72,7 @@ public static class DragonStageBuilder
         config.potionName = "Élixir de puissance";
         config.timeLimit = 90f;
         config.shakesRequired = 15;
+        config.tapToBrew = true;
         config.showTutorialHints = false;
         config.recipe = new List<RecipeEntry>
         {

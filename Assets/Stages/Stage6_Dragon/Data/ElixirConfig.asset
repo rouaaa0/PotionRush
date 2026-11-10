@@ -16,6 +16,7 @@ MonoBehaviour:
   potionName: "\xC9lixir de puissance"
   timeLimit: 90
   shakesRequired: 15
+  tapToBrew: 1
   showTutorialHints: 0
   recipe:
   - type: 5

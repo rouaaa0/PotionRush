@@ -18,6 +18,7 @@ public class StageConfig : ScriptableObject
     public string potionName = "Potion";
     public float timeLimit = 120f;
     public int shakesRequired = 10;
+    public bool tapToBrew = false; // brew by touching circles on the screen instead of shaking the phone (final stage)
     public bool showTutorialHints = false; // on for stage 1 only
     public List<RecipeEntry> recipe = new List<RecipeEntry>();
 

@@ -336,7 +336,7 @@ public class HUD : MonoBehaviour
             int total = 0;
             foreach (RecipeEntry entry in stage.config.recipe) total += stage.Collected(entry.type);
 
-            if (stage.Brewing) hint = "Secouez votre téléphone !";
+            if (stage.Brewing) hint = stage.config.tapToBrew ? "Touchez les cercles !" : "Secouez votre téléphone !";
             else if (stage.RecipeComplete) hint = "Allez jusqu'au chaudron";
             else if (!hasMoved) hint = "Inclinez votre téléphone pour vous déplacer";
             else if (total == 0) hint = "Marchez sur un ingrédient pour le ramasser";

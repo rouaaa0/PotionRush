@@ -26,6 +26,7 @@ public class GameInput : MonoBehaviour
     [SerializeField] float shakeCooldown = 0.25f;
 
     float lastShakeTime = -10f;
+    BrewTapTarget tapTarget; // the circles to touch, in stages that brew with touches
     bool calibrated;
     float neutralPitch;
 
@@ -111,11 +112,22 @@ public class GameInput : MonoBehaviour
         Keyboard kb = Keyboard.current;
         if (kb != null && kb.spaceKey.wasPressedThisFrame) shaken = true;
 
-        if (Accelerometer.current != null &&
+        // Some stages (the final one) brew by touching circles on the screen instead of shaking the phone.
+        StageManager stage = StageManager.Instance;
+        bool tapToBrew = stage != null && stage.config != null && stage.config.tapToBrew;
+        float cooldown = shakeCooldown;
+
+        if (tapToBrew)
+        {
+            if (tapTarget == null) tapTarget = BrewTapTarget.Create();
+            if (tapTarget.Poll(stage.Brewing && stage.State == StageState.Playing)) shaken = true;
+            cooldown = 0f; // every circle touched counts
+        }
+        else if (Accelerometer.current != null &&
             Accelerometer.current.acceleration.ReadValue().magnitude > shakeThreshold)
             shaken = true;
 
-        if (shaken && Time.time - lastShakeTime > shakeCooldown)
+        if (shaken && Time.time - lastShakeTime > cooldown)
         {
             lastShakeTime = Time.time;
             Shaken?.Invoke();

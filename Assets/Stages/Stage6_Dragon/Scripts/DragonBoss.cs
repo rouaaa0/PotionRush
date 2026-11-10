@@ -564,7 +564,7 @@ public class DragonBoss : MonoBehaviour
     {
         if (hud == null || hud.hintRoot == null || !Playing) return;
 
-        string text = stage.Brewing ? "Secouez votre téléphone !" : Time.time < hintUntil ? hint : "";
+        string text = stage.Brewing ? (stage.config.tapToBrew ? "Touchez les cercles !" : "Secouez votre téléphone !") : Time.time < hintUntil ? hint : "";
         if (text.Length == 0) return;
 
         hud.hintRoot.SetActive(true);
