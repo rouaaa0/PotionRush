@@ -21,7 +21,7 @@ public class StageSelect : MonoBehaviour
         Rebuild();
     }
 
-    void Rebuild()
+    public void Rebuild()
     {
         for (int i = cardsRoot.childCount - 1; i >= 0; i--) Destroy(cardsRoot.GetChild(i).gameObject);
         for (int i = 0; i < catalog.stages.Count; i++) MakeCard(i, catalog.stages[i]);

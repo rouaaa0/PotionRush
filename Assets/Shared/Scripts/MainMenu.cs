@@ -53,6 +53,66 @@ public class MainMenu : MonoBehaviour
         Sprite rounded = select != null ? select.roundedSprite : null;
         mainElements.Add(MakeToggle("Son", () => GameSettings.SoundOn, on => GameSettings.SoundOn = on, -30f, rounded));
         mainElements.Add(MakeToggle("Vibration", () => GameSettings.VibrationOn, on => GameSettings.VibrationOn = on, -126f, rounded));
+
+        MakeRestartButton(select);
+    }
+
+    // "Recommencer" sits next to "Retour" on the stage select screen. It erases all progress, so the
+    // first tap only asks for confirmation; a second tap within 3 seconds sends the player back to Stage 1.
+    void MakeRestartButton(StageSelect select)
+    {
+        if (select == null || stageSelectBack == null) return;
+
+        RectTransform back = stageSelectBack.GetComponent<RectTransform>();
+        GameObject restart = Instantiate(stageSelectBack.gameObject, back.parent);
+        restart.name = "RestartButton";
+
+        RectTransform rect = restart.GetComponent<RectTransform>();
+        rect.anchoredPosition = back.anchoredPosition + new Vector2(260f, 0f);
+        back.anchoredPosition += new Vector2(-260f, 0f);
+
+        Image image = restart.GetComponent<Image>();
+        Color normal = new Color(0.85f, 0.3f, 0.25f, 0.55f);
+        Color asking = new Color(0.95f, 0.25f, 0.2f, 0.95f);
+        image.color = normal;
+
+        Text label = restart.GetComponentInChildren<Text>(true); // the panel is still hidden at this point
+        const string Idle = "Recommencer";
+        label.text = Idle;
+
+        Button button = restart.GetComponent<Button>();
+        button.onClick = new Button.ButtonClickedEvent(); // drop the copied "Retour" action
+        float askedAt = -10f;
+
+        button.onClick.AddListener(() =>
+        {
+            if (Time.unscaledTime - askedAt > 3f)
+            {
+                askedAt = Time.unscaledTime;
+                label.text = "Sûr ? Touche encore";
+                image.color = asking;
+                StartCoroutine(ResetLabelLater(label, image, Idle, normal, () => askedAt));
+                return;
+            }
+
+            askedAt = -10f;
+            GameProgress.ResetProgress(select.catalog);
+            label.text = Idle;
+            image.color = normal;
+            ShowTagline();
+            select.Rebuild();
+        });
+    }
+
+    System.Collections.IEnumerator ResetLabelLater(Text label, Image image, string idle, Color normal, Func<float> askedAt)
+    {
+        float started = askedAt();
+        yield return new WaitForSecondsRealtime(3f);
+        if (askedAt() == started)
+        {
+            label.text = idle;
+            image.color = normal;
+        }
     }
 
     // A rounded gold-bordered button that flips a setting between OUI and NON.

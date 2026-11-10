@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // What the player has achieved so far, saved on the device (PlayerPrefs).
-// Stage 1 is always open; a stage opens when the one before it has been won.
+// Stage 1 is always open; a stage opens when every stage before it has been won.
 // Stages whose scene is not made yet are skipped, so the team can build them in any order.
 public static class GameProgress
 {
@@ -43,12 +43,26 @@ public static class GameProgress
     {
         if (PickAnyStage || UnlockAll) return true;
 
-        for (int i = index - 1; i >= 0; i--)
+        // stages are played in order: every playable stage before this one must be won
+        for (int i = 0; i < index; i++)
         {
             string previous = catalog.stages[i].sceneName;
-            if (Application.CanStreamedLevelBeLoaded(previous)) return HasWon(previous);
+            if (Application.CanStreamedLevelBeLoaded(previous) && !HasWon(previous)) return false;
         }
-        return true; // no playable stage before this one
+        return true;
+    }
+
+    // "Recommencer": back to the very start. Every win and best score is erased and demo mode
+    // is turned off, so only Stage 1 is open. Sound and vibration settings are kept.
+    public static void ResetProgress(StageCatalog catalog)
+    {
+        foreach (StageInfo stage in catalog.stages)
+        {
+            PlayerPrefs.DeleteKey("won_" + stage.sceneName);
+            PlayerPrefs.DeleteKey("best_" + stage.sceneName);
+        }
+        PlayerPrefs.DeleteKey(UnlockAllKey);
+        PlayerPrefs.Save();
     }
 
     // The first stage after this one whose scene exists, or null if there is none yet.
